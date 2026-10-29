@@ -15,10 +15,12 @@ gate
 
 `gate` is what the CI gate job runs. The `windows-latest` test job reaches what only Windows
 enforces, which has no local counterpart.
+
 ## Exports
 
-The module has one consumer, Mortar. A new export needs a call site in that consumer, not a use for it here. Tests are in the same package and exercise unexported code directly, so they are
-not a reason to export anything.
+The module has one consumer. A new export needs a call site there, not a use for it here.
+Tests are in the same package and exercise unexported code directly, so they are not a reason to
+export anything.
 
 ## Dependencies
 
