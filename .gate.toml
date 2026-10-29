@@ -21,9 +21,10 @@ run = "./scripts/actionlint"
 run = "go tool golangci-lint fmt --diff ./..."
 
 # Compiles the module and its tests for Windows, where a build-tagged file can
-# break without any Linux check noticing.
+# break without any Linux check noticing; darwin has its own Trash and the clone
+# stub, and freebsd keeps the unix-tagged free-space file compiling.
 [gates.crosscompile]
-run = "GOOS=windows GOARCH=amd64 go vet ./..."
+run = "GOOS=windows GOARCH=amd64 go vet ./... && GOOS=darwin GOARCH=arm64 GOTMPDIR=/var/tmp TMPDIR=/var/tmp go vet ./... && GOOS=freebsd GOARCH=amd64 GOTMPDIR=/var/tmp TMPDIR=/var/tmp go vet ./..."
 
 # No-op in CI, which never uses --no-verify and already scanned every commit on
 # the way in, so a second scan there spends runner minutes to repeat it. The

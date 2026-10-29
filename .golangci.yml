@@ -55,10 +55,21 @@ linters:
     - usetesting
     - wastedassign
     - zerologlint
-  # canon go-golangci-lint-00014
+  # canon go-golangci-lint-00014; the deviation is declared in canon.toml
   exclusions:
     generated: lax
+    rules:
+      # Only the lock-tolerant wrappers (rename*.go) and tests call the os functions.
+      - path: (^rename.*\.go$|_test\.go$)
+        linters:
+          - forbidigo
   settings:
+    # A plain os.Remove or os.Rename fails on Windows while an antivirus scanner or the search indexer holds the file.
+    forbidigo:
+      analyze-types: true
+      forbid:
+        - pattern: ^os\.(Remove|RemoveAll|Rename)$
+          msg: use the lock-tolerant safefs call
     # canon go-golangci-lint-00008
     govet:
       enable-all: true
