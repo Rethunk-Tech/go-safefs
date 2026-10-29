@@ -1,18 +1,17 @@
 # AGENTS.md
 
 Package `safefs` is file I/O for a program that writes into folders it does not own and reads files it did not write;
-subpackage `diskcache` is a typed JSON cache on top of it. Mortar imports it. It imports no consumer package, no
+subpackage `diskcache` is a typed JSON cache on top of it. It imports no consumer package, no
 logging or settings, and only `golang.org/x/sys` beyond the standard library.
 
 ## Gate
 
 `gate` is the command. Each override in `.gate.toml` is there because a runner
 cannot resolve that check from PATH. The `windows-latest` test job is the only place
-Windows-only behaviour runs. It is the first run of `copy_windows_test.go`, `inode_windows_test.go`, the junction path
-in `link_windows.go` and the retry in `rename_windows.go`. A real reflink needs btrfs or XFS and ReFS ids need ReFS,
+Windows-only behaviour runs: `copy_windows_test.go`, `inode_windows_test.go`, the junction path in
+`link_windows.go` and the retry in `rename_windows.go`. A real reflink needs btrfs or XFS and ReFS ids need ReFS,
 so those tests probe and skip on the runners; CI proves the fallback only.
 
-Beyond `gate`, run `GOOS=windows go vet ./...` (also darwin, freebsd) after touching a build-tagged file; the gate does.
 ## Shape
 
 - **Rooted wrappers mirror `os` or add a refusal.** `Open`, `OpenFile`, `Create`, `ReadFile`, `WriteFile`, `Stat`,

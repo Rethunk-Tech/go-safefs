@@ -31,9 +31,6 @@ A worked example and the contracts: [HUMANS.md](HUMANS.md).
 - `ResolveFold`, which finds a path written for Windows on a case-sensitive file system.
 - `diskcache`, typed JSON cache files where a crash or a stale shape only costs a refetch.
 
-`Materializer` remembers which link tiers a device refused for the whole process. Under `go test` the atomic writers
-skip their fsyncs, because a test cannot observe one.
-
 ## Documentation
 
 | Doc | Audience |
