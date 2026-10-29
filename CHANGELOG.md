@@ -6,4 +6,12 @@ Notable changes to `go-safefs`. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Parent-rooted opens and reads (`Within`, `Open`, `OpenRegular`, `ReadFile`, `HashFile`, and the rest) that refuse a symlinked last element leading out of the parent.
+- `ReadCapped` and `CapReader`, byte-capped reads that fail with `ErrTooLarge` instead of ending short.
+- `Rename`, `Remove` and `RemoveAll`, retrying on Windows while a scanner or indexer holds the file.
+- Path helpers (`SamePath`, `FoldCase`, `EvalSymlinks`, `ExtendedPath`, `WalkFiles`) and `ResolveFold`, a backtracking case-insensitive lookup over an `fs.FS`.
+- `WriteFileAtomic`, `WriteStreamAtomic`, `WriteStreamNoSync` and `SyncDir`; `Trash` and `CheckWritable`.
+
 [Unreleased]: https://github.com/Rethunk-Tech/go-safefs/commits/main
