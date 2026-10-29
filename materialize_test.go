@@ -246,6 +246,9 @@ func TestMaterializeFallbackNonFallbackError(t *testing.T) {
 }
 
 func TestMaterializerRemembersWhatADeviceRefused(t *testing.T) {
+	// The memory is process-wide, so an earlier test on the same device may already have recorded a refusal.
+	capCache.Clear()
+	t.Cleanup(capCache.Clear)
 	src, dst := t.TempDir(), t.TempDir()
 	writeFile(t, src, "a.bin", "a")
 	writeFile(t, src, "b.bin", "b")
