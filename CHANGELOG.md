@@ -6,6 +6,8 @@ Notable changes to `go-safefs`. The format follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-29
+
 ### Added
 
 - Parent-rooted opens and reads (`Within`, `Open`, `OpenRegular`, `ReadFile`, `HashFile`, and the rest) that refuse a symlinked last element leading out of the parent.
@@ -18,4 +20,5 @@ Notable changes to `go-safefs`. The format follows
 - `Size`, `SizeEachName` and `FreeBytes`.
 - Subpackage `diskcache`: typed JSON cache entries (`Cached`, `CachedStamped`, `Peek`, `Fresh`, `Put`, `PutEntry`) where a failed fetch falls back to a stale entry and the cache itself never errors. A name that would lead outside the cache directory is treated as uncached.
 
-[Unreleased]: https://github.com/Rethunk-Tech/go-safefs/commits/main
+[Unreleased]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Rethunk-Tech/go-safefs/releases/tag/v0.1.0
