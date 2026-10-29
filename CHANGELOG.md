@@ -13,5 +13,8 @@ Notable changes to `go-safefs`. The format follows
 - `Rename`, `Remove` and `RemoveAll`, retrying on Windows while a scanner or indexer holds the file.
 - Path helpers (`SamePath`, `FoldCase`, `EvalSymlinks`, `ExtendedPath`, `WalkFiles`) and `ResolveFold`, a backtracking case-insensitive lookup over an `fs.FS`.
 - `WriteFileAtomic`, `WriteStreamAtomic`, `WriteStreamNoSync` and `SyncDir`; `Trash` and `CheckWritable`.
+- `CopyFile`, `CopyTree` and `CopyTreeFollowingLinks` (with `CopyOptions` and `DanglingLinkError`), and the `UnderRoot`, `RealDirUnder` and `LinkedDir` path checks they use.
+- `Clone`, `LinkUnsupported`, `Device`, `HardLinkID`, `Shared`, `Unshare` and `LinkDir`; `Materializer`, which puts files at a destination by the cheapest sharing it allows.
+- `Size`, `SizeEachName` and `FreeBytes`.
 
 [Unreleased]: https://github.com/Rethunk-Tech/go-safefs/commits/main

@@ -1,0 +1,40 @@
+//go:build windows
+
+package safefs
+
+import (
+	"encoding/binary"
+	"os"
+
+	"golang.org/x/sys/windows"
+)
+
+// fileIDInfoSize is FILE_ID_INFO: a 64-bit volume serial and the 128-bit file id that stays unique on ReFS, where the
+// 64-bit file index may not.
+const fileIDInfoSize = 24
+
+// HardLinkID returns the file-id key of a file with more than one hard link. os.FileInfo does not carry the
+// link count on Windows, so the file is opened for attributes only.
+func HardLinkID(path string, _ os.FileInfo) (FileID, bool) {
+	p, err := windows.UTF16PtrFromString(ExtendedPath(path))
+	if err != nil {
+		return FileID{}, false
+	}
+	h, err := windows.CreateFile(p, windows.FILE_READ_ATTRIBUTES,
+		windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE|windows.FILE_SHARE_DELETE, nil,
+		windows.OPEN_EXISTING, windows.FILE_FLAG_BACKUP_SEMANTICS, 0)
+	if err != nil {
+		return FileID{}, false
+	}
+	defer func() { _ = windows.CloseHandle(h) }()
+	var fi windows.ByHandleFileInformation
+	if err := windows.GetFileInformationByHandle(h, &fi); err != nil || fi.NumberOfLinks < 2 {
+		return FileID{}, false
+	}
+	var id [fileIDInfoSize]byte
+	if err := windows.GetFileInformationByHandleEx(h, windows.FileIdInfo, &id[0], fileIDInfoSize); err == nil {
+		le := binary.LittleEndian
+		return FileID{le.Uint64(id[0:8]), le.Uint64(id[8:16]), le.Uint64(id[16:24])}, true
+	}
+	return FileID{uint64(fi.VolumeSerialNumber), uint64(fi.FileIndexHigh)<<32 | uint64(fi.FileIndexLow), 0}, true
+}
