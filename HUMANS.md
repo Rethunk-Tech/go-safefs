@@ -77,7 +77,7 @@ default.
 | `ResolveFold` | Exact name first, then case variants in sorted order, backtracking; at most 8 directory reads per element; `fs.ErrInvalid` unless `fs.ValidPath`, `fs.ErrNotExist` when nothing matches. |
 | `Trash` | Freedesktop trash or the Recycle Bin; `errors.ErrUnsupported` on darwin. |
 | `CheckWritable` | `nil` for a missing directory, else the probe's `*fs.PathError`. |
-| `diskcache.Cached`, `CachedStamped` | Fetch when the entry is missing, old, from the future or stamped differently; a failed fetch falls back to the stale entry. Never returns a cache error. |
+| `diskcache.Cached`, `CachedStamped` | Fetch when the entry is missing, old, from the future or stamped differently; a failed fetch falls back to the stale entry. Never returns a cache error. A name that is not local to `Dir` (absolute, or `..`) is never read or written. |
 | `diskcache.Peek`, `Fresh`, `Put`, `PutEntry` | A file with no `"fetched"` or no `"value"` key reads as absent; `"value": null` is present. Write errors are dropped. |
 
 ## Requirements

@@ -22,6 +22,7 @@ Please do not open a public issue for a suspected vulnerability first.
 - The `rel` string of `ResolveFold`: it must not return a path outside `fsys`, loop, or read more than 8 directories
   per element; anything that fails `fs.ValidPath` is refused.
 - Files in a cache directory: `diskcache` must treat a torn, foreign or older-shape file as absent, never as a value.
+- Cache names: `diskcache` must never read or write a file outside `Dir`, whatever name it is given.
 - Files being replaced: `WriteFileAtomic`, `WriteStreamAtomic` and `CopyFile` must leave the destination whole or
   untouched on a crash or failure.
 

@@ -169,3 +169,21 @@ func TestConcurrentUse(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestANameOutsideDirNeverReachesAFile(t *testing.T) {
+	parent := t.TempDir()
+	c := &diskcache.Cache{Dir: filepath.Join(parent, "cache")}
+	for _, name := range []string{"../escape.json", filepath.Join(parent, "abs.json"), ""} {
+		if p := c.Path(name); p != "" {
+			t.Fatalf("Path(%q) = %q, want \"\"", name, p)
+		}
+		diskcache.Put(c, name, 1)
+	}
+	if p := c.Path("sub/ok.json"); p != filepath.Join(parent, "cache", "sub", "ok.json") {
+		t.Fatalf("a nested local name = %q", p)
+	}
+	entries, err := os.ReadDir(parent)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("a write escaped the cache: %v %v", entries, err)
+	}
+}

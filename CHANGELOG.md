@@ -16,6 +16,6 @@ Notable changes to `go-safefs`. The format follows
 - `CopyFile`, `CopyTree` and `CopyTreeFollowingLinks` (with `CopyOptions` and `DanglingLinkError`), and the `UnderRoot`, `RealDirUnder` and `LinkedDir` path checks they use.
 - `Clone`, `LinkUnsupported`, `Device`, `HardLinkID`, `Shared`, `Unshare` and `LinkDir`; `Materializer`, which puts files at a destination by the cheapest sharing it allows.
 - `Size`, `SizeEachName` and `FreeBytes`.
-- Subpackage `diskcache`: typed JSON cache entries (`Cached`, `CachedStamped`, `Peek`, `Fresh`, `Put`, `PutEntry`) where a failed fetch falls back to a stale entry and the cache itself never errors.
+- Subpackage `diskcache`: typed JSON cache entries (`Cached`, `CachedStamped`, `Peek`, `Fresh`, `Put`, `PutEntry`) where a failed fetch falls back to a stale entry and the cache itself never errors. A name that would lead outside the cache directory is treated as uncached.
 
 [Unreleased]: https://github.com/Rethunk-Tech/go-safefs/commits/main

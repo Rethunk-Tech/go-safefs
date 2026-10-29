@@ -35,9 +35,11 @@ func (c *Cache) now() time.Time {
 	return time.Now().UTC()
 }
 
-// Path is the file holding name, or "" when the cache is disabled.
+// Path is the file holding name, or "" when the cache is disabled. A name that is not a local path under Dir
+// (filepath.IsLocal: absolute, or leading out with "..") also gets "", so a key built from untrusted input can
+// cost a refetch but never reach a file outside the cache.
 func (c *Cache) Path(name string) string {
-	if c.Dir == "" {
+	if c.Dir == "" || !filepath.IsLocal(name) {
 		return ""
 	}
 	return filepath.Join(c.Dir, name)
