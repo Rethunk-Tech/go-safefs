@@ -25,7 +25,8 @@ type Materializer struct {
 	// Tiers is the order to try; zero means clone, hardlink, symlink, copy. Copy is the tier that never fails over.
 	Tiers []Tier
 	// Shareable reports whether rel may share an inode or be a link; false keeps it off the hardlink and symlink
-	// tiers. Nil means every file.
+	// tiers. rel is slash-separated on every OS, so one policy reads the same paths everywhere. Nil means every
+	// file.
 	Shareable func(rel string) bool
 	// Copy is the options of the copy tier.
 	Copy CopyOptions
@@ -84,7 +85,7 @@ func (m Materializer) File(src, dst, rel string) error {
 }
 
 func (m Materializer) put(ops tierOps, useCache bool, src, dst, rel string) error {
-	shareable := m.Shareable == nil || m.Shareable(rel)
+	shareable := m.Shareable == nil || m.Shareable(filepath.ToSlash(rel))
 	srcDev, srcErr := Device(src)
 	dstDev, dstErr := Device(filepath.Dir(dst))
 	sameDev := srcErr == nil && dstErr == nil && srcDev == dstDev

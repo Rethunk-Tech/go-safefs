@@ -72,7 +72,7 @@ default.
 | `CopyTree` | Never follows a directory link (returned in `skipped`); copies a file link by content only when it resolves under `src`, else errors. `First` copies one top-level entry first. |
 | `CopyTreeFollowingLinks` | Copies a file link from wherever it points, skips linked folders and `Skip` names, refuses non-regular files; a missing target is a `*DanglingLinkError`. |
 | `Clone`, `LinkUnsupported` | Reflink (Linux, Windows ReFS); `dst` is created exclusively with mode 0o600. Elsewhere `Clone` fails and `LinkUnsupported` says to fall back to a copy. |
-| `Materializer` | Falls through its tiers on `LinkUnsupported`, never clones or hard-links across devices, and keeps files `Shareable` rejects off the link tiers. The refusal memory is process-wide. |
+| `Materializer` | Falls through its tiers on `LinkUnsupported`, never clones or hard-links across devices, and keeps files `Shareable` rejects off the link tiers; `Shareable` gets slash-separated paths on every OS. The refusal memory is process-wide. |
 | `Size`, `SizeEachName` | Total bytes of regular files, hard links once or every name in full; unreadable entries are skipped. |
 | `ResolveFold` | Exact name first, then case variants in sorted order, backtracking; at most 8 directory reads per element; `fs.ErrInvalid` unless `fs.ValidPath`, `fs.ErrNotExist` when nothing matches. |
 | `Trash` | Freedesktop trash or the Recycle Bin; `errors.ErrUnsupported` on darwin. |
