@@ -4,6 +4,7 @@ package diskcache
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -20,9 +21,14 @@ type Entry[T any] struct {
 	Stamp string `json:"build,omitempty"`
 }
 
-// Cache is a directory of entries, one file per name.
+// ErrNoDir is returned by Cached, CachedStamped, Put and PutEntry for a non-nil Cache whose Dir is empty. That is a
+// caller bug (an unresolved data folder), not a request for no caching.
+var ErrNoDir = errors.New("diskcache: Cache.Dir is empty")
+
+// Cache is a directory of entries, one file per name. A nil *Cache is the way to run without a cache: Cached and
+// CachedStamped always fetch, Peek and Fresh find nothing, Put and PutEntry do nothing.
 type Cache struct {
-	// Dir is where entries live. Empty disables the cache: Cached always fetches and Peek finds nothing.
+	// Dir is where entries live. It must not be empty; Peek finds nothing and the writers return ErrNoDir otherwise.
 	Dir string
 	// Now is the clock; nil means time.Now().UTC().
 	Now func() time.Time
@@ -35,11 +41,11 @@ func (c *Cache) now() time.Time {
 	return time.Now().UTC()
 }
 
-// Path is the file holding name, or "" when the cache is disabled. A name that is not a local path under Dir
+// Path is the file holding name, or "" for a nil cache or an empty Dir. A name that is not a local path under Dir
 // (filepath.IsLocal: absolute, or leading out with "..") also gets "", so a key built from untrusted input can
 // cost a refetch but never reach a file outside the cache.
 func (c *Cache) Path(name string) string {
-	if c.Dir == "" || !filepath.IsLocal(name) {
+	if c == nil || c.Dir == "" || !filepath.IsLocal(name) {
 		return ""
 	}
 	return filepath.Join(c.Dir, name)
@@ -99,6 +105,13 @@ func Cached[T any](c *Cache, name string, ttl time.Duration, fetch func() (T, er
 // CachedStamped is Cached that also refetches an entry whose Stamp is not stamp; that entry still stands in when the
 // fetch fails.
 func CachedStamped[T any](c *Cache, name, stamp string, ttl time.Duration, fetch func() (T, error)) (T, error) {
+	if c == nil {
+		return fetch()
+	}
+	if c.Dir == "" {
+		var zero T
+		return zero, ErrNoDir
+	}
 	if c.Path(name) == "" {
 		return fetch()
 	}
@@ -133,10 +146,23 @@ func (c *Cache) young(t time.Time, ttl time.Duration) bool {
 	return age >= 0 && age < ttl
 }
 
-// Put stores value at name as if it had just been fetched, unstamped.
-func Put[T any](c *Cache, name string, value T) {
-	write(c, name, Entry[T]{Fetched: c.now(), Value: value})
+// Put stores value at name as if it had just been fetched, unstamped. It returns ErrNoDir for an empty Dir; a nil
+// cache is a no-op, and a write that fails only costs a refetch.
+func Put[T any](c *Cache, name string, value T) error {
+	if c == nil {
+		return nil
+	}
+	return PutEntry(c, name, Entry[T]{Fetched: c.now(), Value: value})
 }
 
-// PutEntry stores e at name as it is, for a caller that stamps or dates its own entry.
-func PutEntry[T any](c *Cache, name string, e Entry[T]) { write(c, name, e) }
+// PutEntry stores e at name as it is, for a caller that stamps or dates its own entry. Errors as Put.
+func PutEntry[T any](c *Cache, name string, e Entry[T]) error {
+	if c == nil {
+		return nil
+	}
+	if c.Dir == "" {
+		return ErrNoDir
+	}
+	write(c, name, e)
+	return nil
+}

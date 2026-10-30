@@ -54,7 +54,7 @@ func TestFailedFetchFallsBackToTheStaleEntryElseErrors(t *testing.T) {
 	if _, err := diskcache.Cached(c, "k", time.Hour, failing); !errors.Is(err, boom) {
 		t.Fatalf("no entry: err = %v, want the fetch error", err)
 	}
-	diskcache.Put(c, "k", "old")
+	_ = diskcache.Put(c, "k", "old")
 	clk.t = epoch.Add(2 * time.Hour)
 	if v, err := diskcache.Cached(c, "k", time.Hour, failing); err != nil || v != "old" {
 		t.Fatalf("stale fallback: %q, %v", v, err)
@@ -84,7 +84,7 @@ func TestStampMismatchRefetchesYetStandsIn(t *testing.T) {
 func TestFutureStampedEntryIsNotYoung(t *testing.T) {
 	t.Parallel()
 	c, _ := newCache(t)
-	diskcache.PutEntry(c, "k", diskcache.Entry[string]{Fetched: epoch.Add(time.Hour), Value: "future"})
+	_ = diskcache.PutEntry(c, "k", diskcache.Entry[string]{Fetched: epoch.Add(time.Hour), Value: "future"})
 	if diskcache.Fresh[string](c, "k", 24*time.Hour) {
 		t.Fatal("an entry from the future counted as fresh")
 	}
@@ -94,25 +94,45 @@ func TestFutureStampedEntryIsNotYoung(t *testing.T) {
 	}
 }
 
-func TestEmptyDirAlwaysFetches(t *testing.T) {
+func TestNilCacheIsOff(t *testing.T) {
+	t.Parallel()
+	var c *diskcache.Cache
+	fetch, calls := counting("x", nil)
+	for range 2 {
+		if v, err := diskcache.Cached(c, "k", time.Hour, fetch); err != nil || v != "x" {
+			t.Fatalf("got %q, %v", v, err)
+		}
+	}
+	if err := diskcache.Put(c, "k", "x"); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := diskcache.Peek[string](c, "k"); ok || *calls != 2 || c.Path("k") != "" || diskcache.Fresh[string](c, "k", time.Hour) {
+		t.Fatalf("nil cache kept state: calls %d", *calls)
+	}
+}
+
+func TestEmptyDirIsACallerBug(t *testing.T) {
 	t.Parallel()
 	c := &diskcache.Cache{}
 	fetch, calls := counting("x", nil)
-	for range 2 {
-		if _, err := diskcache.Cached(c, "k", time.Hour, fetch); err != nil {
-			t.Fatal(err)
-		}
+	if _, err := diskcache.Cached(c, "k", time.Hour, fetch); !errors.Is(err, diskcache.ErrNoDir) {
+		t.Fatalf("Cached err = %v, want ErrNoDir", err)
 	}
-	diskcache.Put(c, "k", "x")
-	if _, ok := diskcache.Peek[string](c, "k"); ok || *calls != 2 || c.Path("k") != "" {
-		t.Fatalf("disabled cache kept state: calls %d, path %q", *calls, c.Path("k"))
+	if _, err := diskcache.CachedStamped(c, "k", "s", time.Hour, fetch); !errors.Is(err, diskcache.ErrNoDir) {
+		t.Fatalf("CachedStamped err = %v, want ErrNoDir", err)
+	}
+	if err := diskcache.Put(c, "k", "x"); !errors.Is(err, diskcache.ErrNoDir) {
+		t.Fatalf("Put err = %v, want ErrNoDir", err)
+	}
+	if _, ok := diskcache.Peek[string](c, "k"); ok || *calls != 0 {
+		t.Fatalf("empty Dir fetched or found an entry: calls %d", *calls)
 	}
 }
 
 func TestPutPeekRoundTripWritesTheContractKeys(t *testing.T) {
 	t.Parallel()
 	c, _ := newCache(t)
-	diskcache.Put(c, "sub/k", []int{1, 2})
+	_ = diskcache.Put(c, "sub/k", []int{1, 2})
 	e, ok := diskcache.Peek[[]int](c, "sub/k")
 	if !ok || len(e.Value) != 2 || !e.Fetched.Equal(epoch) || e.Stamp != "" {
 		t.Fatalf("Peek = %+v, %v", e, ok)
@@ -161,7 +181,7 @@ func TestConcurrentUse(t *testing.T) {
 	for i := range 8 {
 		wg.Go(func() {
 			for range 20 {
-				diskcache.Put(c, "shared", i)
+				_ = diskcache.Put(c, "shared", i)
 				_, _ = diskcache.Cached(c, "shared", time.Hour, func() (int, error) { return i, nil })
 				diskcache.Peek[int](c, "shared")
 			}
@@ -177,7 +197,7 @@ func TestANameOutsideDirNeverReachesAFile(t *testing.T) {
 		if p := c.Path(name); p != "" {
 			t.Fatalf("Path(%q) = %q, want \"\"", name, p)
 		}
-		diskcache.Put(c, name, 1)
+		_ = diskcache.Put(c, name, 1)
 	}
 	if p := c.Path("sub/ok.json"); p != filepath.Join(parent, "cache", "sub", "ok.json") {
 		t.Fatalf("a nested local name = %q", p)

@@ -6,6 +6,12 @@ Notable changes to `go-safefs`. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-30
+
+### Changed
+
+- `diskcache`: an empty `Cache.Dir` no longer means "caching off", which silently disabled caches whose data folder failed to resolve. Run without a cache with a nil `*Cache` (every function accepts it). A non-nil `Cache` with an empty `Dir` makes `Cached`, `CachedStamped`, `Put` and `PutEntry` return the new `ErrNoDir`, and `Peek` find nothing. `Put` and `PutEntry` now return an `error`.
+
 ## [0.1.0] - 2026-10-29
 
 ### Added
@@ -20,5 +26,6 @@ Notable changes to `go-safefs`. The format follows
 - `Size`, `SizeEachName` and `FreeBytes`.
 - Subpackage `diskcache`: typed JSON cache entries (`Cached`, `CachedStamped`, `Peek`, `Fresh`, `Put`, `PutEntry`) where a failed fetch falls back to a stale entry and the cache itself never errors. A name that would lead outside the cache directory is treated as uncached.
 
-[Unreleased]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Rethunk-Tech/go-safefs/releases/tag/v0.1.0
