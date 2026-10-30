@@ -87,3 +87,40 @@ func TestTrashIgnoresARelativeXDGDataHome(t *testing.T) {
 		t.Fatal("not trashed under the home's default data folder")
 	}
 }
+
+// copyAll is what a cross-filesystem Trash runs; the plain file branch and its refusals need no second filesystem.
+func TestCopyAllCopiesAFileAndRefusesWhatCannotBeCopied(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "f")
+	if err := os.WriteFile(src, []byte("data"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := copyAll(src, filepath.Join(dir, "copy")); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := os.ReadFile(filepath.Join(dir, "copy")); err != nil || string(got) != "data" { //nolint:gosec // G304: a temp file this test made
+		t.Fatalf("copy = %q, %v", got, err)
+	}
+	tree := filepath.Join(dir, "tree")
+	if err := os.Mkdir(tree, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := syscall.Mkfifo(filepath.Join(tree, "pipe"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for name, c := range map[string]struct{ from, to string }{
+		"missing source":     {filepath.Join(dir, "none"), filepath.Join(dir, "x1")},
+		"destination exists": {src, filepath.Join(dir, "copy")},
+		"folder exists":      {tree, dir},
+	} {
+		if copyAll(c.from, c.to) == nil {
+			t.Errorf("%s: no error", name)
+		}
+	}
+	if err := copyAll(tree, filepath.Join(dir, "treecopy")); err != nil { // a pipe has nothing to keep
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(filepath.Join(dir, "treecopy", "pipe")); !os.IsNotExist(err) {
+		t.Errorf("the pipe was copied: %v", err)
+	}
+}

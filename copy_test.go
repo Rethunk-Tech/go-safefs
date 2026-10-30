@@ -195,3 +195,10 @@ func TestCopyTreeProgressAndFirstEntry(t *testing.T) {
 		t.Fatalf("progress = %+v", last)
 	}
 }
+
+func TestDanglingLinkErrorNamesTheLink(t *testing.T) {
+	err := &DanglingLinkError{Rel: "a/link", Err: os.ErrNotExist}
+	if !strings.Contains(err.Error(), "a/link") || !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("%v", err)
+	}
+}
