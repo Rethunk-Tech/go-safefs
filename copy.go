@@ -189,7 +189,7 @@ func walkCopy(r *os.Root, src, dst string, opts CopyOptions, pass int, progress 
 					return err
 				}
 			}
-			if err := put(from, target, rel); err != nil {
+			if err := put(from, target, filepath.FromSlash(rel)); err != nil {
 				return err
 			}
 		}
@@ -322,7 +322,7 @@ func CopyTreeFollowingLinks(src, dst string, opts CopyOptions) error {
 			// A file link is followed wherever it points, by design, so it is read by path.
 			from, err := EvalSymlinks(p)
 			if errors.Is(err, fs.ErrNotExist) {
-				return &DanglingLinkError{Rel: rel, Err: err}
+				return &DanglingLinkError{Rel: filepath.FromSlash(rel), Err: err}
 			} else if err != nil {
 				return err
 			}
