@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 )
 
 // Within runs fn with an os.Root on path's parent directory and path's final element, so a symlinked final element
@@ -99,17 +100,28 @@ func ReadFileIfExists(path string) ([]byte, bool, error) {
 // ReadDirIfExists lists the directory path, sorted by name like os.ReadDir, through the parent root. A missing path
 // gives nil, false, nil, and any other failure is returned.
 func ReadDirIfExists(path string) ([]os.DirEntry, bool, error) {
+	missing := false
 	entries, err := Within(path, func(r *os.Root, name string) ([]os.DirEntry, error) {
 		d, err := r.Open(name)
+		if errors.Is(err, fs.ErrNotExist) {
+			missing = true
+			return nil, nil
+		}
 		if err != nil {
 			return nil, err
 		}
 		defer func() { _ = d.Close() }()
+		// Windows reports reading a file as a directory as not-exist, so a file in the way is caught here.
+		if info, err := d.Stat(); err != nil {
+			return nil, err
+		} else if !info.IsDir() {
+			return nil, &fs.PathError{Op: "readdir", Path: path, Err: syscall.ENOTDIR}
+		}
 		list, err := d.ReadDir(-1)
 		slices.SortFunc(list, func(a, b os.DirEntry) int { return strings.Compare(a.Name(), b.Name()) })
 		return list, err
 	})
-	if errors.Is(err, fs.ErrNotExist) {
+	if missing || errors.Is(err, fs.ErrNotExist) {
 		return nil, false, nil
 	}
 	if err != nil {

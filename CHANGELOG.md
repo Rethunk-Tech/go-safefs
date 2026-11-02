@@ -6,6 +6,12 @@ Notable changes to `go-safefs`. The format follows
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-02
+
+### Fixed
+
+- `ReadDirIfExists` returns an error for a file at the path on Windows too, instead of reporting it missing.
+
 ## [0.5.0] - 2026-11-02
 
 ### Added
@@ -44,7 +50,8 @@ Notable changes to `go-safefs`. The format follows
 - `Size`, `SizeEachName` and `FreeBytes`.
 - Subpackage `diskcache`: typed JSON cache entries (`Cached`, `CachedStamped`, `Peek`, `Fresh`, `Put`, `PutEntry`) where a failed fetch falls back to a stale entry and the cache itself never errors. A name that would lead outside the cache directory is treated as uncached.
 
-[Unreleased]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.2.0...v0.3.0
