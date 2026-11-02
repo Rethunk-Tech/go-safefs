@@ -38,8 +38,8 @@ so those tests probe and skip on the runners; CI proves the fallback only.
 - **`diskcache` never returns a cache error.** A missing, torn, foreign or older-shape file is a miss, and an entry
   with no `"value"` key is a miss even when `"fetched"` parses. The JSON keys `fetched`, `value` and `build` are
   read by other tools; the Go field is `Stamp`, the key stays `build`.
-- **The darwin build compiles but is unsupported**: `Trash` returns `errors.ErrUnsupported`, and `Clone` fails with
-  an error `LinkUnsupported` accepts, so `Materializer` falls through to a copy.
+- **The darwin build is untested here**: `Trash` returns `errors.ErrUnsupported`, and `Clone` uses `clonefile` (no
+  Linux or CI run exercises it), failing with an error `LinkUnsupported` accepts so `Materializer` falls through to a copy.
 
 ## Files
 
@@ -53,7 +53,7 @@ so those tests probe and skip on the runners; CI proves the fallback only.
 | `walkfiles.go` | `WalkFiles` |
 | `write.go`, `syncdir_*.go` | Atomic and no-sync writers, `SyncDir` |
 | `copy.go` | `CopyOptions`, `CopyFile`, `CopyTree`, `CopyTreeFollowingLinks`, `UnderRoot`, `RealDirUnder`, `LinkedDir` |
-| `clone_linux.go`, `clone_windows.go`, `clone_stub.go` | `Clone`, `LinkUnsupported`, `Device` per OS |
+| `clone_linux.go`, `clone_darwin.go`, `clone_windows.go`, `clone_stub.go` | `Clone`, `LinkUnsupported`, `Device` per OS |
 | `inode_*.go` | `HardLinkID` and `FileID` |
 | `links.go`, `links_unix.go`, `links_windows.go` | `Shared`, `Unshare` and the link-count read |
 | `link_unix.go`, `link_windows.go` | `LinkDir`: symlink, or an unprivileged junction on Windows |

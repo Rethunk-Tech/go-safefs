@@ -21,8 +21,7 @@ run = "./scripts/actionlint"
 run = "go tool golangci-lint fmt --diff ./..."
 
 # Compiles the module and its tests for Windows, where a build-tagged file can
-# break without any Linux check noticing; darwin has its own Trash and the clone
-# stub, and freebsd keeps the unix-tagged free-space file compiling.
+# break without any Linux check noticing; darwin has its own Trash and clone, and freebsd keeps the unix-tagged free-space file compiling.
 [gates.crosscompile]
 run = "GOOS=windows GOARCH=amd64 go vet ./... && GOOS=darwin GOARCH=arm64 go vet ./... && GOOS=freebsd GOARCH=amd64 go vet ./..."
 

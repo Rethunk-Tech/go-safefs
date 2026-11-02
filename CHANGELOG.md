@@ -6,6 +6,12 @@ Notable changes to `go-safefs`. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-02
+
+### Added
+
+- `Clone` uses `clonefile(2)` on macOS, sharing blocks on APFS; a volume or pair of paths that cannot clone still falls back to a copy through `LinkUnsupported`.
+
 ## [0.2.0] - 2026-10-30
 
 ### Changed
@@ -26,6 +32,7 @@ Notable changes to `go-safefs`. The format follows
 - `Size`, `SizeEachName` and `FreeBytes`.
 - Subpackage `diskcache`: typed JSON cache entries (`Cached`, `CachedStamped`, `Peek`, `Fresh`, `Put`, `PutEntry`) where a failed fetch falls back to a stale entry and the cache itself never errors. A name that would lead outside the cache directory is treated as uncached.
 
-[Unreleased]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Rethunk-Tech/go-safefs/releases/tag/v0.1.0
