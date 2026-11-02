@@ -100,20 +100,7 @@ func ReadFileIfExists(path string) ([]byte, bool, error) {
 // ReadDirIfExists lists the directory path, sorted by name like os.ReadDir, through the parent root. A missing path
 // gives nil, false, nil, and any other failure is returned.
 func ReadDirIfExists(path string) ([]os.DirEntry, bool, error) {
-	missing := false
 	entries, err := Within(path, func(r *os.Root, name string) ([]os.DirEntry, error) {
-		// Windows reports opening or reading a file as a directory as not-exist, so the kind is checked first.
-		info, err := r.Lstat(name)
-		if errors.Is(err, fs.ErrNotExist) {
-			missing = true
-			return nil, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		if !info.IsDir() {
-			return nil, &fs.PathError{Op: "readdir", Path: path, Err: syscall.ENOTDIR}
-		}
 		d, err := r.Open(name)
 		if err != nil {
 			return nil, err
@@ -123,7 +110,11 @@ func ReadDirIfExists(path string) ([]os.DirEntry, bool, error) {
 		slices.SortFunc(list, func(a, b os.DirEntry) int { return strings.Compare(a.Name(), b.Name()) })
 		return list, err
 	})
-	if missing || errors.Is(err, fs.ErrNotExist) {
+	if errors.Is(err, fs.ErrNotExist) {
+		// Windows reports a file read as a directory as not-exist, so whatever is there decides.
+		if info, lerr := os.Lstat(path); lerr == nil && !info.IsDir() {
+			return nil, false, &fs.PathError{Op: "readdir", Path: path, Err: syscall.ENOTDIR}
+		}
 		return nil, false, nil
 	}
 	if err != nil {
