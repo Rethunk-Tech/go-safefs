@@ -6,9 +6,15 @@ Notable changes to `go-safefs`. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `UnderRoot` uses `filepath.IsLocal`, so on Windows a reserved device name (`NUL`, `COM1`) below the root is no longer under it.
+- `CopyTree` and `CopyTreeFollowingLinks` read the source through one `os.Root`, so a link swapped in during the copy cannot lead a read out of `src`. A file link that escapes `src` is still refused by `CopyTree`; a custom `Put` still opens `from` by path. `CopyTreeFollowingLinks` still follows file links wherever they point.
+- `WalkFiles` walks with `fs.WalkDir`; a root that is a symlink is followed.
+
 ### Fixed
 
-- `ReadDirIfExists` checks the path's kind before opening it, so a file at the path is an error on Windows as well.
+- `ReadDirIfExists` returns an error for a file at the path on Windows too, instead of reporting it missing.
 
 ## [0.5.1] - 2026-11-02
 

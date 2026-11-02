@@ -27,7 +27,8 @@ type CopyOptions struct {
 	First string
 	// Progress is called after each file with the running totals.
 	Progress func(CopyProgress)
-	// Put writes one file; from is where its bytes live, to where they go, rel its path below src. Nil means CopyFile.
+	// Put writes one file; from is where its bytes live, to where they go, rel its slash path below src. Nil means
+	// CopyFile, which reads through the walk's root; a Put opens from by path, outside that guarantee.
 	Put func(from, to, rel string) error
 	// Skip names entries CopyTreeFollowingLinks leaves out.
 	Skip func(name string) bool
@@ -44,10 +45,11 @@ func (o CopyOptions) tempSuffix() string {
 // junctions, mount points and symlink directories are not followed, and are returned in skipped. Symlink files are
 // copied by content when they still resolve under src, and are an error when they escape.
 func CopyTree(src, dst string, opts CopyOptions) (skipped []string, err error) {
-	put := opts.Put
-	if put == nil {
-		put = func(from, to, _ string) error { return CopyFile(from, to, opts) }
+	r, err := os.OpenRoot(src)
+	if err != nil {
+		return nil, err
 	}
+	defer func() { _ = r.Close() }()
 	root, err := EvalSymlinks(src)
 	if err != nil {
 		return nil, err
@@ -76,7 +78,7 @@ func CopyTree(src, dst string, opts CopyOptions) (skipped []string, err error) {
 		passes = 2
 	}
 	for pass := 0; pass < passes && err == nil; pass++ {
-		err = walkCopy(src, dst, opts.First, pass, &progress, opts.Progress, put, root, &skipped)
+		err = walkCopy(r, src, dst, opts, pass, &progress, opts.Put, root, &skipped)
 	}
 	return skipped, err
 }
@@ -94,82 +96,107 @@ func LinkedDir(p string, info os.FileInfo) bool {
 	return err == nil && st.IsDir()
 }
 
-// walkCopy is one walk of CopyTree. In a two-pass copy, pass 0 takes only the first entry and pass 1 the rest.
-func walkCopy(src, dst, first string, pass int, progress *CopyProgress, report func(CopyProgress), put func(from, to, rel string) error, root string, skipped *[]string) error {
-	return filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
+// openIn opens the file rel (a slash path) below r, refusing a link that leads out of it. A Windows runner has
+// answered not-exist for a file that is there, so that one answer is checked against the plain path.
+func openIn(r *os.Root, src, rel string) (*os.File, error) {
+	f, err := r.Open(rel)
+	if errors.Is(err, fs.ErrNotExist) {
+		if p := filepath.Join(src, filepath.FromSlash(rel)); pathExists(p) {
+			return Open(p)
+		}
+	}
+	return f, err
+}
+
+// openLinkTarget opens the file the link p leads to when the root refused the link itself: os.Root treats an
+// absolute link target as an escape even when it lands inside, so the target is resolved and reopened by its path
+// below the real source folder, which the root still confines. A target outside is the "escapes" refusal.
+func openLinkTarget(r *os.Root, src, root, p string) (*os.File, error) {
+	resolved, err := EvalSymlinks(p)
+	if err != nil {
+		return nil, err
+	}
+	if !UnderRoot(root, resolved) {
+		return nil, fmt.Errorf("%s escapes %s", p, src)
+	}
+	rel, err := filepath.Rel(root, resolved)
+	if err != nil {
+		return nil, err
+	}
+	return openIn(r, src, filepath.ToSlash(rel))
+}
+
+// walkCopy is one walk of CopyTree through the root r on src, so no entry is opened by a path a swapped link could
+// redirect. In a two-pass copy, pass 0 takes only the first entry and pass 1 the rest.
+func walkCopy(r *os.Root, src, dst string, opts CopyOptions, pass int, progress *CopyProgress, put func(from, to, rel string) error, root string, skipped *[]string) error {
+	return fs.WalkDir(r.FS(), ".", func(rel string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if first != "" && p != src {
-			top, relErr := filepath.Rel(src, p)
-			if relErr != nil {
-				return relErr
-			}
-			if (strings.SplitN(filepath.ToSlash(top), "/", 2)[0] == first) != (pass == 0) {
-				if d.IsDir() {
-					return fs.SkipDir
-				}
-				return nil
-			}
+		if rel == "." {
+			return os.MkdirAll(dst, 0o750)
 		}
-		info, err := os.Lstat(p)
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			if p != src && !RealDirUnder(root, p) {
+		if opts.First != "" && (strings.SplitN(rel, "/", 2)[0] == opts.First) != (pass == 0) {
+			if d.IsDir() {
 				return fs.SkipDir
 			}
-			rel, err := filepath.Rel(src, p)
-			if err != nil {
-				return err
+			return nil
+		}
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		p := filepath.Join(src, filepath.FromSlash(rel))
+		target := filepath.Join(dst, filepath.FromSlash(rel))
+		if info.IsDir() {
+			if !RealDirUnder(root, p) {
+				return fs.SkipDir
 			}
-			return os.MkdirAll(filepath.Join(dst, rel), 0o750)
+			return os.MkdirAll(target, 0o750)
 		}
 		if LinkedDir(p, info) {
 			*skipped = append(*skipped, p)
 			return nil
 		}
-		resolved, err := EvalSymlinks(p)
-		if err != nil {
-			return err
-		}
-		rel, err := filepath.Rel(src, p)
-		if err != nil {
-			return err
-		}
-		target := filepath.Join(dst, rel)
-		if info.Mode()&os.ModeSymlink != 0 {
-			if !UnderRoot(root, resolved) {
-				return fmt.Errorf("%s escapes %s", p, src)
-			}
-			if err := put(resolved, target, rel); err != nil {
-				return err
-			}
-			if report != nil {
-				progress.Files++
-				info, err := os.Stat(resolved)
-				if err != nil {
-					return err
-				}
-				progress.Bytes += info.Size()
-				report(*progress)
-			}
-			return nil
-		}
-		if !info.Mode().IsRegular() {
+		isLink := info.Mode()&os.ModeSymlink != 0
+		if !isLink && !info.Mode().IsRegular() {
 			return fmt.Errorf("%s is not a regular file", p)
 		}
-		if !UnderRoot(root, resolved) {
-			return fmt.Errorf("%s escapes %s", p, src)
+		f, err := openIn(r, src, rel)
+		if err != nil && isLink {
+			f, err = openLinkTarget(r, src, root, p)
 		}
-		if err := put(p, target, rel); err != nil {
+		if err != nil {
 			return err
 		}
-		if report != nil {
+		defer func() { _ = f.Close() }()
+		st, err := f.Stat()
+		if err != nil {
+			return err
+		}
+		if !st.Mode().IsRegular() {
+			return fmt.Errorf("%s is not a regular file", p)
+		}
+		if put == nil {
+			if err := copyFrom(f, target, opts); err != nil {
+				return err
+			}
+		} else {
+			// Put takes a path, so a custom Put reopens it outside the root; the open above only vets the entry.
+			from := p
+			if isLink {
+				if from, err = EvalSymlinks(p); err != nil {
+					return err
+				}
+			}
+			if err := put(from, target, rel); err != nil {
+				return err
+			}
+		}
+		if opts.Progress != nil {
 			progress.Files++
-			progress.Bytes += info.Size()
-			report(*progress)
+			progress.Bytes += st.Size()
+			opts.Progress(*progress)
 		}
 		return nil
 	})
@@ -180,7 +207,7 @@ func UnderRoot(root, p string) bool {
 	root = filepath.Clean(root)
 	p = filepath.Clean(p)
 	rel, err := filepath.Rel(root, p)
-	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))
+	return err == nil && filepath.IsLocal(rel)
 }
 
 // RealDirUnder reports whether p is a directory whose own path still resolves under root, not a symlink
@@ -212,6 +239,11 @@ func CopyFile(src, dst string, opts CopyOptions) (err error) {
 		return err
 	}
 	defer func() { _ = in.Close() }()
+	return copyFrom(in, dst, opts)
+}
+
+// copyFrom is CopyFile's body over an already open source.
+func copyFrom(in *os.File, dst string, opts CopyOptions) (err error) {
 	info, err := in.Stat()
 	if err != nil {
 		return err
@@ -255,25 +287,30 @@ func (e *DanglingLinkError) Unwrap() error { return e.Err }
 // It is for a folder the user chose on their own disk, filled with links by another tool; linked folders are still
 // skipped and anything that is not a regular file is refused. A link to a missing file is a *DanglingLinkError.
 func CopyTreeFollowingLinks(src, dst string, opts CopyOptions) error {
+	r, err := os.OpenRoot(src)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = r.Close() }()
 	root, err := EvalSymlinks(src)
 	if err != nil {
 		return err
 	}
-	return filepath.WalkDir(src, func(p string, _ fs.DirEntry, err error) error {
+	return fs.WalkDir(r.FS(), ".", func(rel string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		info, err := os.Lstat(p)
+		if rel == "." {
+			return os.MkdirAll(dst, 0o750)
+		}
+		info, err := d.Info()
 		if err != nil {
 			return err
 		}
-		rel, err := filepath.Rel(src, p)
-		if err != nil {
-			return err
-		}
-		target := filepath.Join(dst, rel)
+		p := filepath.Join(src, filepath.FromSlash(rel))
+		target := filepath.Join(dst, filepath.FromSlash(rel))
 		if info.IsDir() {
-			if p != src && !RealDirUnder(root, p) {
+			if !RealDirUnder(root, p) {
 				return fs.SkipDir
 			}
 			return os.MkdirAll(target, 0o750)
@@ -281,9 +318,10 @@ func CopyTreeFollowingLinks(src, dst string, opts CopyOptions) error {
 		if LinkedDir(p, info) || (opts.Skip != nil && opts.Skip(info.Name())) {
 			return nil
 		}
-		from := p
 		if info.Mode()&os.ModeSymlink != 0 {
-			if from, err = EvalSymlinks(p); errors.Is(err, fs.ErrNotExist) {
+			// A file link is followed wherever it points, by design, so it is read by path.
+			from, err := EvalSymlinks(p)
+			if errors.Is(err, fs.ErrNotExist) {
 				return &DanglingLinkError{Rel: rel, Err: err}
 			} else if err != nil {
 				return err
@@ -291,10 +329,19 @@ func CopyTreeFollowingLinks(src, dst string, opts CopyOptions) error {
 			if info, err = os.Stat(from); err != nil {
 				return err
 			}
+			if !info.Mode().IsRegular() {
+				return fmt.Errorf("%s is not a regular file", p)
+			}
+			return CopyFile(from, target, opts)
 		}
 		if !info.Mode().IsRegular() {
 			return fmt.Errorf("%s is not a regular file", p)
 		}
-		return CopyFile(from, target, opts)
+		f, err := openIn(r, src, rel)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = f.Close() }()
+		return copyFrom(f, target, opts)
 	})
 }

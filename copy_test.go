@@ -44,6 +44,21 @@ func TestCopyTreeRejectsASymlinkFileThatEscapes(t *testing.T) {
 	}
 }
 
+func TestCopyTreeRejectsARelativeSymlinkThatEscapes(t *testing.T) {
+	parent := t.TempDir()
+	src := filepath.Join(parent, "src")
+	if err := os.Mkdir(src, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, parent, "secret", "no")
+	if err := os.Symlink(filepath.Join("..", "secret"), filepath.Join(src, "link")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CopyTree(src, t.TempDir(), CopyOptions{}); err == nil || !strings.Contains(err.Error(), "escapes") {
+		t.Fatalf("escape = %v", err)
+	}
+}
+
 func TestCopyTreeSkipsASymlinkDirectory(t *testing.T) {
 	src := t.TempDir()
 	outside := t.TempDir()
@@ -74,6 +89,9 @@ func TestUnderRoot(t *testing.T) {
 	}
 	if UnderRoot("/data", "/data-other") {
 		t.Fatal("sibling prefix")
+	}
+	if UnderRoot("/data", "/data/../etc") || !UnderRoot("/data", "/data/a/../b") {
+		t.Error("UnderRoot must judge the cleaned path")
 	}
 	if UnderRoot("/data", "/etc") {
 		t.Fatal("path outside root")

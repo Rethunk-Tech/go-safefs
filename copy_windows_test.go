@@ -32,3 +32,9 @@ func TestCopyTreeSkipsAJunction(t *testing.T) {
 		t.Fatal("junction was copied")
 	}
 }
+
+func TestUnderRootRefusesReservedNames(t *testing.T) {
+	if UnderRoot(`C:\data`, `C:\data\NUL`) || !UnderRoot(`C:\data`, `C:\data\sub\file`) {
+		t.Error("a reserved device name is not a path under the root")
+	}
+}
