@@ -6,6 +6,10 @@ Notable changes to `go-safefs`. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `ReadDirIfExists` checks the path's kind before opening it, so a file at the path is an error on Windows as well.
+
 ## [0.5.1] - 2026-11-02
 
 ### Fixed
