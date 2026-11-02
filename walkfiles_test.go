@@ -79,3 +79,19 @@ func TestReadFileIfExists(t *testing.T) {
 		t.Fatalf("directory = %v, %v; want an error", ok, err)
 	}
 }
+
+func TestReadDirIfExists(t *testing.T) {
+	dir := t.TempDir()
+	if e, ok, err := ReadDirIfExists(filepath.Join(dir, "nope")); e != nil || ok || err != nil {
+		t.Fatalf("missing = %v, %v, %v", e, ok, err)
+	}
+	writeFile(t, dir, "d/b", "1")
+	writeFile(t, dir, "d/a", "2")
+	e, ok, err := ReadDirIfExists(filepath.Join(dir, "d"))
+	if !ok || err != nil || len(e) != 2 || e[0].Name() != "a" || e[1].Name() != "b" {
+		t.Fatalf("present = %v, %v, %v", e, ok, err)
+	}
+	if _, ok, err := ReadDirIfExists(filepath.Join(dir, "d", "a")); ok || err == nil {
+		t.Fatalf("file = %v, %v; want an error", ok, err)
+	}
+}

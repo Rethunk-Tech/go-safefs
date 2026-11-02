@@ -6,6 +6,10 @@ Notable changes to `go-safefs`. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `ReadDirIfExists`, a sorted directory listing through the parent root where a missing directory is a normal answer.
+
 ## [0.4.0] - 2026-11-02
 
 ### Added

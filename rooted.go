@@ -8,6 +8,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 )
 
 // Within runs fn with an os.Root on path's parent directory and path's final element, so a symlinked final element
@@ -92,6 +94,28 @@ func ReadFileIfExists(path string) ([]byte, bool, error) {
 		return nil, false, err
 	}
 	return data, true, nil
+}
+
+// ReadDirIfExists lists the directory path, sorted by name like os.ReadDir, through the parent root. A missing path
+// gives nil, false, nil, and any other failure is returned.
+func ReadDirIfExists(path string) ([]os.DirEntry, bool, error) {
+	entries, err := Within(path, func(r *os.Root, name string) ([]os.DirEntry, error) {
+		d, err := r.Open(name)
+		if err != nil {
+			return nil, err
+		}
+		defer func() { _ = d.Close() }()
+		list, err := d.ReadDir(-1)
+		slices.SortFunc(list, func(a, b os.DirEntry) int { return strings.Compare(a.Name(), b.Name()) })
+		return list, err
+	})
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	return entries, true, nil
 }
 
 // WriteFile writes data to path, creating it with perm if needed.
