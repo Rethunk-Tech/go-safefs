@@ -6,6 +6,8 @@ Notable changes to `go-safefs`. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-02
+
 ### Changed
 
 - `UnderRoot` uses `filepath.IsLocal`, so on Windows a reserved device name (`NUL`, `COM1`) below the root is no longer under it.
@@ -60,7 +62,8 @@ Notable changes to `go-safefs`. The format follows
 - `Size`, `SizeEachName` and `FreeBytes`.
 - Subpackage `diskcache`: typed JSON cache entries (`Cached`, `CachedStamped`, `Peek`, `Fresh`, `Put`, `PutEntry`) where a failed fetch falls back to a stale entry and the cache itself never errors. A name that would lead outside the cache directory is treated as uncached.
 
-[Unreleased]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.3.0...v0.4.0
