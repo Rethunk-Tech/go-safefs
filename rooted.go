@@ -81,6 +81,19 @@ func ReadFile(path string) ([]byte, error) {
 	return Within(path, func(r *os.Root, name string) ([]byte, error) { return r.ReadFile(name) })
 }
 
+// ReadFileIfExists is ReadFile for a file that may not be there: a missing path gives nil, false, nil, and any other
+// failure is returned.
+func ReadFileIfExists(path string) ([]byte, bool, error) {
+	data, err := ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	return data, true, nil
+}
+
 // WriteFile writes data to path, creating it with perm if needed.
 func WriteFile(path string, data []byte, perm fs.FileMode) error {
 	_, err := Within(path, func(r *os.Root, name string) (struct{}, error) {

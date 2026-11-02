@@ -50,7 +50,7 @@ so those tests probe and skip on the runners; CI proves the fallback only.
 | `rename.go`, `rename_other.go`, `rename_windows.go` | Lock-tolerant `Rename`, `Remove`, `RemoveAll` and the retry loop |
 | `samepath.go`, `foldcase_*.go`, `evalsymlinks*.go` | `SamePath`, `FoldCase`, `EvalSymlinks`, `ExtendedPath` |
 | `foldpath.go` | `ResolveFold` |
-| `walkfiles.go` | `WalkFiles` |
+| `walkfiles.go` | `WalkFiles`, `WalkRegular` |
 | `write.go`, `syncdir_*.go` | Atomic and no-sync writers, `SyncDir` |
 | `copy.go` | `CopyOptions`, `CopyFile`, `CopyTree`, `CopyTreeFollowingLinks`, `UnderRoot`, `RealDirUnder`, `LinkedDir` |
 | `clone_linux.go`, `clone_darwin.go`, `clone_windows.go`, `clone_stub.go` | `Clone`, `LinkUnsupported`, `Device` per OS |
