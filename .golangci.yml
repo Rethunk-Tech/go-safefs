@@ -21,6 +21,7 @@ linters:
     - gocheckcompilerdirectives
     - gochecknoinits
     - gochecksumtype
+    - gocognit
     - gocritic
     - godot
     - godox
@@ -63,7 +64,14 @@ linters:
       - path: (^rename.*\.go$|_test\.go$)
         linters:
           - forbidigo
+      # canon go-golangci-lint-00017
+      - path: _test\.go
+        linters:
+          - gocognit
   settings:
+    # canon go-golangci-lint-00017
+    gocognit:
+      min-complexity: 30
     # A plain os.Remove or os.Rename fails on Windows while an antivirus scanner or the search indexer holds the file.
     forbidigo:
       analyze-types: true

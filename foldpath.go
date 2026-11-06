@@ -42,19 +42,9 @@ func ResolveFold(fsys fs.FS, rel string) (string, error) {
 			}
 			return walk(next, i+1)
 		}
-		for _, e := range entries {
-			if e.Name() == parts[i] {
-				if got, ok := try(e.Name()); ok {
-					return got, true
-				}
-				break
-			}
-		}
-		for _, e := range entries {
-			if e.Name() != parts[i] && strings.EqualFold(e.Name(), parts[i]) {
-				if got, ok := try(e.Name()); ok {
-					return got, true
-				}
+		for _, name := range foldCandidates(entries, parts[i]) {
+			if got, ok := try(name); ok {
+				return got, true
 			}
 		}
 		return "", false
@@ -63,4 +53,21 @@ func ResolveFold(fsys fs.FS, rel string) (string, error) {
 		return got, nil
 	}
 	return "", &fs.PathError{Op: "resolvefold", Path: rel, Err: fs.ErrNotExist}
+}
+
+// foldCandidates lists the entry named exactly want first, then the case variants in directory order.
+func foldCandidates(entries []fs.DirEntry, want string) []string {
+	var out []string
+	for _, e := range entries {
+		if e.Name() == want {
+			out = append(out, want)
+			break
+		}
+	}
+	for _, e := range entries {
+		if e.Name() != want && strings.EqualFold(e.Name(), want) {
+			out = append(out, e.Name())
+		}
+	}
+	return out
 }

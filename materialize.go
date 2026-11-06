@@ -99,19 +99,7 @@ func (m Materializer) put(ops tierOps, useCache bool, src, dst, rel string) erro
 		tiers = []Tier{TierClone, TierHardlink, TierSymlink, TierCopy}
 	}
 	for _, t := range tiers {
-		switch t {
-		case TierHardlink, TierSymlink:
-			if !shareable {
-				continue
-			}
-		case TierClone, TierCopy:
-		default:
-			continue
-		}
-		if !sameDev && (t == TierClone || t == TierHardlink) {
-			continue
-		}
-		if caps != nil && t != TierCopy && caps[t-1].Load() < 0 {
+		if !tierAllowed(t, shareable, sameDev, caps) {
 			continue
 		}
 		fn := ops.fn(t)
@@ -133,4 +121,22 @@ func (m Materializer) put(ops tierOps, useCache bool, src, dst, rel string) erro
 		}
 	}
 	return ops.copy(src, dst)
+}
+
+// tierAllowed reports whether tier t may be tried: known, shareable if it links, on one device if it clones or hard-links,
+// and not already refused by the device.
+func tierAllowed(t Tier, shareable, sameDev bool, caps *capSlots) bool {
+	switch t {
+	case TierHardlink, TierSymlink:
+		if !shareable {
+			return false
+		}
+	case TierClone, TierCopy:
+	default:
+		return false
+	}
+	if !sameDev && (t == TierClone || t == TierHardlink) {
+		return false
+	}
+	return caps == nil || t == TierCopy || caps[t-1].Load() >= 0
 }

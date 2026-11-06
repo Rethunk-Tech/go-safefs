@@ -158,48 +158,53 @@ func walkCopy(r *os.Root, src, dst string, opts CopyOptions, pass int, progress 
 			*skipped = append(*skipped, p)
 			return nil
 		}
-		isLink := info.Mode()&os.ModeSymlink != 0
-		if !isLink && !info.Mode().IsRegular() {
-			return fmt.Errorf("%s is not a regular file", p)
-		}
-		f, err := openIn(r, src, rel)
-		if err != nil && isLink {
-			f, err = openLinkTarget(r, src, root, p)
-		}
-		if err != nil {
-			return err
-		}
-		defer func() { _ = f.Close() }()
-		st, err := f.Stat()
-		if err != nil {
-			return err
-		}
-		if !st.Mode().IsRegular() {
-			return fmt.Errorf("%s is not a regular file", p)
-		}
-		if put == nil {
-			if err := copyFrom(f, target, opts); err != nil {
-				return err
-			}
-		} else {
-			// Put takes a path, so a custom Put reopens it outside the root; the open above only vets the entry.
-			from := p
-			if isLink {
-				if from, err = EvalSymlinks(p); err != nil {
-					return err
-				}
-			}
-			if err := put(from, target, filepath.FromSlash(rel)); err != nil {
-				return err
-			}
-		}
-		if opts.Progress != nil {
-			progress.Files++
-			progress.Bytes += st.Size()
-			opts.Progress(*progress)
-		}
-		return nil
+		return copyEntry(r, src, root, rel, p, target, info, opts, progress, put)
 	})
+}
+
+// copyEntry copies one non-directory entry of walkCopy: the open vets it, then it is written by copyFrom or put.
+func copyEntry(r *os.Root, src, root, rel, p, target string, info fs.FileInfo, opts CopyOptions, progress *CopyProgress, put func(from, to, rel string) error) error {
+	isLink := info.Mode()&os.ModeSymlink != 0
+	if !isLink && !info.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", p)
+	}
+	f, err := openIn(r, src, rel)
+	if err != nil && isLink {
+		f, err = openLinkTarget(r, src, root, p)
+	}
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+	st, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	if !st.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", p)
+	}
+	if put == nil {
+		if err := copyFrom(f, target, opts); err != nil {
+			return err
+		}
+	} else {
+		// Put takes a path, so a custom Put reopens it outside the root; the open above only vets the entry.
+		from := p
+		if isLink {
+			if from, err = EvalSymlinks(p); err != nil {
+				return err
+			}
+		}
+		if err := put(from, target, filepath.FromSlash(rel)); err != nil {
+			return err
+		}
+	}
+	if opts.Progress != nil {
+		progress.Files++
+		progress.Bytes += st.Size()
+		opts.Progress(*progress)
+	}
+	return nil
 }
 
 // UnderRoot reports whether p is root or a path still inside it after both have been cleaned.
@@ -318,30 +323,35 @@ func CopyTreeFollowingLinks(src, dst string, opts CopyOptions) error {
 		if LinkedDir(p, info) || (opts.Skip != nil && opts.Skip(info.Name())) {
 			return nil
 		}
-		if info.Mode()&os.ModeSymlink != 0 {
-			// A file link is followed wherever it points, by design, so it is read by path.
-			from, err := EvalSymlinks(p)
-			if errors.Is(err, fs.ErrNotExist) {
-				return &DanglingLinkError{Rel: filepath.FromSlash(rel), Err: err}
-			} else if err != nil {
-				return err
-			}
-			if info, err = os.Stat(from); err != nil {
-				return err
-			}
-			if !info.Mode().IsRegular() {
-				return fmt.Errorf("%s is not a regular file", p)
-			}
-			return CopyFile(from, target, opts)
+		return copyFollowing(r, src, rel, p, target, info, opts)
+	})
+}
+
+// copyFollowing copies one non-directory entry of CopyTreeFollowingLinks, following a file link by path.
+func copyFollowing(r *os.Root, src, rel, p, target string, info fs.FileInfo, opts CopyOptions) error {
+	if info.Mode()&os.ModeSymlink != 0 {
+		// A file link is followed wherever it points, by design, so it is read by path.
+		from, err := EvalSymlinks(p)
+		if errors.Is(err, fs.ErrNotExist) {
+			return &DanglingLinkError{Rel: filepath.FromSlash(rel), Err: err}
+		} else if err != nil {
+			return err
+		}
+		if info, err = os.Stat(from); err != nil {
+			return err
 		}
 		if !info.Mode().IsRegular() {
 			return fmt.Errorf("%s is not a regular file", p)
 		}
-		f, err := openIn(r, src, rel)
-		if err != nil {
-			return err
-		}
-		defer func() { _ = f.Close() }()
-		return copyFrom(f, target, opts)
-	})
+		return CopyFile(from, target, opts)
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", p)
+	}
+	f, err := openIn(r, src, rel)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+	return copyFrom(f, target, opts)
 }
