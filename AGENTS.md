@@ -8,7 +8,7 @@ logging or settings, and only `golang.org/x/sys` beyond the standard library.
 
 `gate` is the command. Each override in `.gate.toml` is there because a runner
 cannot resolve that check from PATH. The `windows-latest` test job is the only place
-Windows-only behaviour runs: `copy_windows_test.go`, `inode_windows_test.go`, the junction path in
+Windows-only behaviour runs: `copy_windows_test.go`, `inode_windows_test.go`, `trash_windows_test.go`, the junction path in
 `link_windows.go` and the retry in `rename_windows.go`. A real reflink needs btrfs or XFS and ReFS ids need ReFS,
 so those tests probe and skip on the runners; CI proves the fallback only.
 
@@ -59,6 +59,7 @@ so those tests probe and skip on the runners; CI proves the fallback only.
 | `link_unix.go`, `link_windows.go` | `LinkDir`: symlink, or an unprivileged junction on Windows |
 | `materialize.go` | `Materializer`, `Tier` and the per-device refusal memory |
 | `size.go`, `free_*.go` | `Size`, `SizeEachName`, `FreeBytes` |
-| `trash_freedesktop.go`, `trash_windows.go`, `trash_darwin.go` | `Trash` per OS |
+| `trash_freedesktop.go`, `trash_windows.go`, `trash_darwin.go` | `Trash` per OS; on Windows, SHFileOperation's codes as errors |
+| `holders.go`, `holders_windows.go`, `holders_other.go` | `ErrInUse`, `Holder`, `Holders` (Windows only) |
 | `writable.go` | `CheckWritable` |
 | `diskcache/cache.go` | `Cache`, `Entry` and the cached-answer functions |

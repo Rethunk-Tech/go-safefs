@@ -6,6 +6,15 @@ Notable changes to `go-safefs`. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `Holders` lists the programs that have files or folders open on Windows, by name and process id; elsewhere it returns `errors.ErrUnsupported`.
+- `ErrInUse`, wrapped by a Windows `Trash` error when another program holds the folder or a file in it.
+
+### Changed
+
+- A Windows `Trash` error says what SHFileOperation's code means instead of only the number, and wraps `fs.ErrPermission` or `ErrInUse` where they fit.
+
 ## [0.6.0] - 2026-11-02
 
 ### Changed

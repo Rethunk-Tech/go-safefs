@@ -75,7 +75,8 @@ default.
 | `Materializer` | Falls through its tiers on `LinkUnsupported`, never clones or hard-links across devices, and keeps files `Shareable` rejects off the link tiers; `Shareable` gets slash-separated paths on every OS. The refusal memory is process-wide. |
 | `Size`, `SizeEachName` | Total bytes of regular files, hard links once or every name in full; unreadable entries are skipped. |
 | `ResolveFold` | Exact name first, then case variants in sorted order, backtracking; at most 8 directory reads per element; `fs.ErrInvalid` unless `fs.ValidPath`, `fs.ErrNotExist` when nothing matches. |
-| `Trash` | Freedesktop trash or the Recycle Bin; `errors.ErrUnsupported` on darwin. |
+| `Trash` | Freedesktop trash or the Recycle Bin; `errors.ErrUnsupported` on darwin. On Windows a folder another program holds fails with `ErrInUse`. |
+| `Holders` | Windows only: the programs with any of the given files or folders open (a folder's holders include a program whose current folder it is, not what is open inside it), named as Windows shows them, never the calling process. |
 | `CheckWritable` | `nil` for a missing directory, else the probe's `*fs.PathError`. |
 | `diskcache.Cached`, `CachedStamped` | Fetch when the entry is missing, old, from the future or stamped differently; a failed fetch falls back to the stale entry. Never returns a cache error. A name that is not local to `Dir` (absolute, or `..`) is never read or written. |
 | `diskcache.Peek`, `Fresh`, `Put`, `PutEntry` | A file with no `"fetched"` or no `"value"` key reads as absent; `"value": null` is present. Write errors are dropped. |
