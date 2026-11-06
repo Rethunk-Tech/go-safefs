@@ -70,7 +70,9 @@ func TestTrashNamesTheProgramThatHoldsAFileInTheFolder(t *testing.T) {
 	if err := Trash(dir); !errors.Is(err, ErrInUse) {
 		t.Errorf("Trash of a held folder: %v", err)
 	}
-	for _, paths := range [][]string{{file, filepath.Join(dir, "missing.txt")}, {dir}} {
+	// A path Windows cannot open (here one it cannot even name) leaves the others answering.
+	unopenable := filepath.Join(dir, "bad\x00name")
+	for _, paths := range [][]string{{file, filepath.Join(dir, "missing.txt")}, {dir}, {unopenable, file}} {
 		holders, err := Holders(paths)
 		if err != nil || len(holders) != 1 || holders[0].PID != child.Process.Pid || holders[0].Name == "" {
 			t.Fatalf("holders of %v: %+v, want pid %d named (%v)", paths, holders, child.Process.Pid, err)

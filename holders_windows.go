@@ -39,17 +39,16 @@ type rmProcessInfo struct {
 
 // Holders lists the running programs, other than this one, that have any of paths open, each once and in the order
 // first found. A path may be a file or a folder; a folder's holders include a program whose current folder it is, but
-// not one that only holds something inside it, so a caller asking about a tree passes its folders and files.
+// not one that only holds something inside it, so a caller asking about a tree passes its folders and files. A path
+// that cannot be opened or asked is skipped, so the error is only for the list of programs as a whole.
 func Holders(paths []string) ([]Holder, error) {
 	self := os.Getpid()
 	var pids []uint32
 	for _, p := range paths {
+		// Gone, delete-pending (seen as access denied) or barred by its ACL: that path names nobody, the rest still do.
 		using, err := pidsUsing(p)
-		if errors.Is(err, windows.ERROR_FILE_NOT_FOUND) || errors.Is(err, windows.ERROR_PATH_NOT_FOUND) {
-			continue
-		}
 		if err != nil {
-			return nil, err
+			continue
 		}
 		for _, pid := range using {
 			if int(pid) != self && !slices.Contains(pids, pid) {

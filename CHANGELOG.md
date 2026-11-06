@@ -6,6 +6,11 @@ Notable changes to `go-safefs`. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `Holders` on Windows skips a path it cannot open or ask (delete-pending, an ACL without read-attributes access)
+  instead of failing the whole list, so the programs holding the other paths are still named.
+
 ## [0.7.0] - 2026-11-06
 
 ### Added
