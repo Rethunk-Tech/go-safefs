@@ -2,7 +2,6 @@ package safefs
 
 import (
 	"path/filepath"
-	"strings"
 )
 
 // EvalSymlinks is filepath.EvalSymlinks that also works on paths past MAX_PATH.
@@ -16,5 +15,5 @@ func EvalSymlinks(p string) (string, error) {
 	if extended == abs {
 		return resolved, err
 	}
-	return strings.TrimPrefix(resolved, `\\?\`), err
+	return trimExtended(resolved), err
 }

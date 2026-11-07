@@ -234,3 +234,22 @@ func TestCopyTreeFollowingLinksReportsLinkedFolders(t *testing.T) {
 		t.Fatalf("skipped = %v, err = %v; want [%s]", skipped, err, link)
 	}
 }
+
+func TestResolvesUnderRefusesALinkedFolderOutside(t *testing.T) {
+	src, outside := t.TempDir(), t.TempDir()
+	writeFile(t, src, "in/a", "a")
+	writeFile(t, outside, "b", "b")
+	if err := os.Symlink(outside, filepath.Join(src, "out")); err != nil {
+		t.Skip(err)
+	}
+	if !resolvesUnder(src, filepath.Join(src, "in", "a")) {
+		t.Error("a file inside was refused")
+	}
+	if resolvesUnder(src, filepath.Join(src, "out", "b")) {
+		t.Error("a file reached through a link out of src was accepted")
+	}
+	if f, err := openUnder(src, filepath.Join(src, "out", "b")); err == nil {
+		_ = f.Close()
+		t.Error("openUnder opened a file outside src")
+	}
+}

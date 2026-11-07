@@ -13,12 +13,18 @@ Notable changes to `go-safefs`. The format follows
 
 ### Fixed
 
+- `EvalSymlinks` on Windows keeps a UNC result absolute (`\\server\share`) when it resolves a long path.
+- The Windows fallback that opens a file by path when the root reports it missing refuses a file that no longer resolves under the source.
+
 - `Size` of a symlinked folder counts the folder's files instead of returning 0.
 - `Trash` across filesystems keeps a symlink as a link instead of copying its target, and refuses a pipe instead of hanging.
 
 ## [0.7.1] - 2026-11-06
 
 ### Fixed
+
+- `EvalSymlinks` on Windows keeps a UNC result absolute (`\\server\share`) when it resolves a long path.
+- The Windows fallback that opens a file by path when the root reports it missing refuses a file that no longer resolves under the source.
 
 - `Holders` on Windows skips a path it cannot open or ask (delete-pending, an ACL without read-attributes access)
   instead of failing the whole list, so the programs holding the other paths are still named.
@@ -44,11 +50,17 @@ Notable changes to `go-safefs`. The format follows
 
 ### Fixed
 
+- `EvalSymlinks` on Windows keeps a UNC result absolute (`\\server\share`) when it resolves a long path.
+- The Windows fallback that opens a file by path when the root reports it missing refuses a file that no longer resolves under the source.
+
 - `ReadDirIfExists` returns an error for a file at the path on Windows too, instead of reporting it missing.
 
 ## [0.5.1] - 2026-11-02
 
 ### Fixed
+
+- `EvalSymlinks` on Windows keeps a UNC result absolute (`\\server\share`) when it resolves a long path.
+- The Windows fallback that opens a file by path when the root reports it missing refuses a file that no longer resolves under the source.
 
 - `ReadDirIfExists` returns an error for a file at the path on Windows too, instead of reporting it missing.
 

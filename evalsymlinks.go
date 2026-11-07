@@ -11,3 +11,12 @@ func ExtendedPath(abs string) string {
 	}
 	return `\\?\` + abs
 }
+
+// trimExtended turns an EvalSymlinks result of an extended-length path back into the classic form: \\?\C:\x
+// becomes C:\x and \\?\UNC\server\share becomes \\server\share. Anything else is returned unchanged.
+func trimExtended(resolved string) string {
+	if rest, ok := strings.CutPrefix(resolved, `\\?\UNC\`); ok {
+		return `\\` + rest
+	}
+	return strings.TrimPrefix(resolved, `\\?\`)
+}

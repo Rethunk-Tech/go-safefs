@@ -29,3 +29,16 @@ func TestSamePath(t *testing.T) {
 		t.Fatalf("case-only difference: same = %v on %s", differentCase, runtime.GOOS)
 	}
 }
+
+func TestTrimExtendedKeepsUNCAbsolute(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{`\\?\C:\Users\u`, `C:\Users\u`},
+		{`\\?\UNC\server\share\dir`, `\\server\share\dir`},
+		{`C:\plain`, `C:\plain`},
+		{`\\server\share`, `\\server\share`},
+	} {
+		if got := trimExtended(tc.in); got != tc.want {
+			t.Errorf("trimExtended(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
