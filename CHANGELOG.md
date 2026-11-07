@@ -6,6 +6,8 @@ Notable changes to `go-safefs`. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-07
+
 ### Added
 
 - `WithinRoot` and `ErrOutsideRoot`: `Within` for a path that must stay below a root, refusing an intermediate symlink that leaves it.
@@ -106,7 +108,8 @@ Notable changes to `go-safefs`. The format follows
 - `Size`, `SizeEachName` and `FreeBytes`.
 - Subpackage `diskcache`: typed JSON cache entries (`Cached`, `CachedStamped`, `Peek`, `Fresh`, `Put`, `PutEntry`) where a failed fetch falls back to a stale entry and the cache itself never errors. A name that would lead outside the cache directory is treated as uncached.
 
-[Unreleased]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.5.1...v0.6.0
