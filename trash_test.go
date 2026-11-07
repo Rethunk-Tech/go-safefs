@@ -124,3 +124,44 @@ func TestCopyAllCopiesAFileAndRefusesWhatCannotBeCopied(t *testing.T) {
 		t.Errorf("the pipe was copied: %v", err)
 	}
 }
+
+// A trashed link is the link, not its target's bytes, also when the trash is on another filesystem.
+func TestTrashAcrossFilesystemsKeepsALinkAsALinkAndRefusesAPipe(t *testing.T) {
+	data := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", data)
+	src := filepath.Join("/dev/shm", "safefs-trash-link-"+strconv.Itoa(os.Getpid()))
+	if err := os.Mkdir(src, 0o700); err != nil {
+		t.Skip("no /dev/shm:", err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(src) })
+	var a, b syscall.Stat_t
+	if syscall.Stat(src, &a) != nil || syscall.Stat(data, &b) != nil || a.Dev == b.Dev {
+		t.Skip("/dev/shm and the test's temp folder are one filesystem")
+	}
+	secret := filepath.Join(src, "secret.txt")
+	writeAt(t, secret, "SECRET")
+	link := filepath.Join(src, "proj-link")
+	if err := os.Symlink(secret, link); err != nil {
+		t.Fatal(err)
+	}
+	if err := Trash(link); err != nil {
+		t.Fatal(err)
+	}
+	trashed, err := os.Lstat(filepath.Join(data, "Trash", "files", "proj-link"))
+	if err != nil || trashed.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("trashed entry = %v, %v; want a symlink", trashed, err)
+	}
+	if !IsFile(secret) {
+		t.Fatal("the link's target was removed")
+	}
+	pipe := filepath.Join(src, "pipe")
+	if err := syscall.Mkfifo(pipe, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := Trash(pipe); err == nil {
+		t.Fatal("a pipe was trashed")
+	}
+	if _, err := os.Lstat(pipe); err != nil {
+		t.Fatalf("the refused pipe is gone: %v", err)
+	}
+}

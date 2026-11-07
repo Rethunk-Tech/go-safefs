@@ -19,13 +19,13 @@ func TestTreeCopiesRefuseWhatIsNotAFile(t *testing.T) {
 	gone := filepath.Join(src, "gone")
 	for name, run := range map[string]func() error{
 		"CopyTree":                func() error { _, err := CopyTree(src, t.TempDir(), CopyOptions{}); return err },
-		"CopyTreeFollowingLinks":  func() error { return CopyTreeFollowingLinks(src, t.TempDir(), CopyOptions{}) },
+		"CopyTreeFollowingLinks":  func() error { _, err := CopyTreeFollowingLinks(src, t.TempDir(), CopyOptions{}); return err },
 		"CopyTree missing source": func() error { _, err := CopyTree(gone, t.TempDir(), CopyOptions{}); return err },
 		"CopyTree missing, with progress": func() error {
 			_, err := CopyTree(gone, t.TempDir(), CopyOptions{Progress: func(CopyProgress) {}})
 			return err
 		},
-		"CopyTreeFollowingLinks missing": func() error { return CopyTreeFollowingLinks(gone, t.TempDir(), CopyOptions{}) },
+		"CopyTreeFollowingLinks missing": func() error { _, err := CopyTreeFollowingLinks(gone, t.TempDir(), CopyOptions{}); return err },
 	} {
 		err := run()
 		if err == nil {
@@ -35,7 +35,7 @@ func TestTreeCopiesRefuseWhatIsNotAFile(t *testing.T) {
 		}
 	}
 	skip := CopyOptions{Skip: func(name string) bool { return name == "pipe" }}
-	if err := CopyTreeFollowingLinks(src, t.TempDir(), skip); err != nil {
+	if _, err := CopyTreeFollowingLinks(src, t.TempDir(), skip); err != nil {
 		t.Errorf("a skipped pipe still failed: %v", err)
 	}
 }

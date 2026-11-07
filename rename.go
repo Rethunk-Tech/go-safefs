@@ -1,9 +1,13 @@
 package safefs
 
 import (
+	"errors"
 	"os"
 	"time"
 )
+
+// ErrMountInside is RemoveAll's refusal of a tree with another filesystem mounted below it.
+var ErrMountInside = errors.New("a mount point lies inside the folder")
 
 const renameRetryWindow = 2 * time.Second
 
@@ -27,7 +31,13 @@ func retry(op func() error, transient func(error) bool, window time.Duration) er
 
 // RemoveAll is os.RemoveAll with the same antivirus/indexer retry as Rename; a repeat pass removes whatever the
 // first one could not.
+//
+// On Unix it refuses with ErrMountInside, before deleting anything, a tree that has a mount point (a bind mount, a
+// FUSE or portal mount) below path: those expose files that are not the tree's own.
 func RemoveAll(path string) error {
+	if err := checkNoMountsInside(path); err != nil {
+		return err
+	}
 	return retry(func() error { return os.RemoveAll(path) }, transientRename, renameRetryWindow)
 }
 

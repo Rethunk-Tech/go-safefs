@@ -87,7 +87,17 @@ func copyAll(from, to string) error {
 	if err != nil {
 		return err
 	}
-	if !info.IsDir() {
+	switch {
+	case info.Mode()&fs.ModeSymlink != 0:
+		// The link is what is trashed, so it is kept as a link rather than replaced by its target's bytes.
+		target, err := os.Readlink(from)
+		if err != nil {
+			return err
+		}
+		return os.Symlink(target, to) // #nosec G703 -- inside the user's own trash
+	case !info.IsDir() && !info.Mode().IsRegular():
+		return fmt.Errorf("%s: %w", from, ErrNotRegular) // a pipe has nothing to copy and opening one blocks
+	case !info.IsDir():
 		return copyRegular(from, to, info.Mode().Perm())
 	}
 	if err := os.Mkdir(to, info.Mode().Perm()|0o700); err != nil { // #nosec G703 -- inside the user's own trash
@@ -138,11 +148,15 @@ func copyAll(from, to string) error {
 
 // copyRegular copies one file, for a trashed path that is a file rather than a folder.
 func copyRegular(from, to string, perm fs.FileMode) error {
-	in, err := os.Open(from) // #nosec G304 G703 -- the file the caller asked to trash
+	// O_NOFOLLOW and O_NONBLOCK close the window in which the path becomes a link or a pipe after copyAll's check.
+	in, err := os.OpenFile(from, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0) // #nosec G304 G703 -- the file the caller asked to trash
 	if err != nil {
 		return err
 	}
 	defer func() { _ = in.Close() }()
+	if st, err := in.Stat(); err != nil || !st.Mode().IsRegular() {
+		return errors.Join(err, fmt.Errorf("%s: %w", from, ErrNotRegular))
+	}
 	out, err := os.OpenFile(to, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm) // #nosec G304 G703 -- inside the user's own trash
 	if err != nil {
 		return err

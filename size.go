@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 )
 
-// Size returns the total size in bytes of the regular files under dir, counting hard-linked files once. Unreadable
+// Size returns the total size in bytes of the regular files under dir (dir itself may be a link to a folder), counting hard-linked files once. Unreadable
 // entries below dir are skipped, so the size is a best-effort total; only a failure to read dir itself is an error.
 func Size(dir string) (int64, error) { return size(dir, true) }
 
@@ -47,7 +47,7 @@ func size(dir string, dedupe bool) (int64, error) {
 		}
 		return nil
 	}
-	if st, err := os.Lstat(dir); err != nil || !st.IsDir() {
+	if st, err := os.Stat(dir); err != nil || !st.IsDir() {
 		err = filepath.WalkDir(dir, visit)
 		return total.Load(), err
 	}

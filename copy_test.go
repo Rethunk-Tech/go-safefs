@@ -163,7 +163,7 @@ func TestCopyTreeFollowingLinksWritesTheTargetAndSkips(t *testing.T) {
 	}
 	dst := t.TempDir()
 	opts := CopyOptions{Skip: func(name string) bool { return name == "__marker" }}
-	if err := CopyTreeFollowingLinks(src, dst, opts); err != nil {
+	if _, err := CopyTreeFollowingLinks(src, dst, opts); err != nil {
 		t.Fatal(err)
 	}
 	if b, _ := ReadFile(filepath.Join(dst, "linked.bin")); string(b) != "bytes" {
@@ -182,7 +182,7 @@ func TestCopyTreeFollowingLinksReportsADanglingLink(t *testing.T) {
 	if err := os.Symlink(filepath.Join(src, "gone"), filepath.Join(src, "dangling.bin")); err != nil {
 		t.Skip(err)
 	}
-	err := CopyTreeFollowingLinks(src, t.TempDir(), CopyOptions{})
+	_, err := CopyTreeFollowingLinks(src, t.TempDir(), CopyOptions{})
 	var dangling *DanglingLinkError
 	if !errors.As(err, &dangling) || dangling.Rel != "dangling.bin" || !errors.Is(err, fs.ErrNotExist) {
 		t.Fatalf("err = %v", err)
@@ -218,5 +218,19 @@ func TestDanglingLinkErrorNamesTheLink(t *testing.T) {
 	err := &DanglingLinkError{Rel: "a/link", Err: os.ErrNotExist}
 	if !strings.Contains(err.Error(), "a/link") || !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("%v", err)
+	}
+}
+
+func TestCopyTreeFollowingLinksReportsLinkedFolders(t *testing.T) {
+	src := t.TempDir()
+	other := t.TempDir()
+	writeFile(t, other, "keep.txt", "k")
+	link := filepath.Join(src, "linkdir")
+	if err := os.Symlink(other, link); err != nil {
+		t.Skip(err)
+	}
+	skipped, err := CopyTreeFollowingLinks(src, t.TempDir(), CopyOptions{})
+	if err != nil || len(skipped) != 1 || skipped[0] != link {
+		t.Fatalf("skipped = %v, err = %v; want [%s]", skipped, err, link)
 	}
 }

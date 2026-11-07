@@ -17,6 +17,8 @@ Please do not open a public issue for a suspected vulnerability first.
 - Paths naming a symlink: `Open`, `ReadFile`, `Stat`, `Within` and the other rooted calls must not follow a symlinked
   last element out of its parent folder. `CopyTree` must not follow a directory link, and must refuse a file link
   that resolves outside the source.
+- `RemoveAll` on Unix must not delete through a mount point below its folder (a bind mount, FUSE or portal mount shows files that are not the tree's): it returns `ErrMountInside` before deleting anything. The mount table is read on Linux; elsewhere a directory on another device stands for a mount. Windows junctions are not checked.
+- `Trash` keeps a trashed link as a link and refuses a pipe or other non-regular file, also when it copies across filesystems.
 - Input of unknown length: `ReadCapped` and `CapReader` must hold at most `limit` bytes plus one probe byte, and must
   fail with `ErrTooLarge` rather than end as if the input were complete.
 - The `rel` string of `ResolveFold`: it must not return a path outside `fsys`, loop, or read more than 8 directories

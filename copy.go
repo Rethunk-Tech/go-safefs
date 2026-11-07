@@ -290,18 +290,19 @@ func (e *DanglingLinkError) Unwrap() error { return e.Err }
 
 // CopyTreeFollowingLinks copies src to dst like CopyTree but writes the file a file link points to wherever it lives.
 // It is for a folder the user chose on their own disk, filled with links by another tool; linked folders are still
-// skipped and anything that is not a regular file is refused. A link to a missing file is a *DanglingLinkError.
-func CopyTreeFollowingLinks(src, dst string, opts CopyOptions) error {
+// skipped, returned in skipped as CopyTree does, and anything that is not a regular file is refused. A link to a
+// missing file is a *DanglingLinkError.
+func CopyTreeFollowingLinks(src, dst string, opts CopyOptions) (skipped []string, err error) {
 	r, err := os.OpenRoot(src)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer func() { _ = r.Close() }()
 	root, err := EvalSymlinks(src)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return fs.WalkDir(r.FS(), ".", func(rel string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(r.FS(), ".", func(rel string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -320,11 +321,16 @@ func CopyTreeFollowingLinks(src, dst string, opts CopyOptions) error {
 			}
 			return os.MkdirAll(target, 0o750)
 		}
-		if LinkedDir(p, info) || (opts.Skip != nil && opts.Skip(info.Name())) {
+		if opts.Skip != nil && opts.Skip(info.Name()) {
+			return nil
+		}
+		if LinkedDir(p, info) {
+			skipped = append(skipped, p)
 			return nil
 		}
 		return copyFollowing(r, src, rel, p, target, info, opts)
 	})
+	return skipped, err
 }
 
 // copyFollowing copies one non-directory entry of CopyTreeFollowingLinks, following a file link by path.

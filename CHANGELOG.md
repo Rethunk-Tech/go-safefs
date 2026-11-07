@@ -6,6 +6,16 @@ Notable changes to `go-safefs`. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `CopyTreeFollowingLinks` returns `(skipped []string, err error)` like `CopyTree`, listing the linked folders it leaves out. Callers add the extra result.
+- `RemoveAll` returns `ErrMountInside`, deleting nothing, when a mount point lies below the folder (Unix).
+
+### Fixed
+
+- `Size` of a symlinked folder counts the folder's files instead of returning 0.
+- `Trash` across filesystems keeps a symlink as a link instead of copying its target, and refuses a pipe instead of hanging.
+
 ## [0.7.1] - 2026-11-06
 
 ### Fixed
