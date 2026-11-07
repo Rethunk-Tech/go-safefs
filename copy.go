@@ -318,6 +318,18 @@ func copyFrom(in *os.File, dst string, opts CopyOptions, batch *syncBatch) (err 
 	return err
 }
 
+// CopyFileNoSync is CopyFile without the fsync: dst is renamed into place whole but its bytes may not be on disk
+// until the caller runs Flush over it, so after a crash it can be short or empty. For a caller that places many files,
+// records progress only after one Flush, and redoes whatever the record does not cover.
+func CopyFileNoSync(src, dst string, opts CopyOptions) error {
+	in, err := Open(src)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = in.Close() }()
+	return copyFrom(in, dst, opts, &syncBatch{})
+}
+
 // DanglingLinkError is CopyTreeFollowingLinks' refusal of a file link whose target is gone.
 type DanglingLinkError struct {
 	// Rel is the link's path below src.

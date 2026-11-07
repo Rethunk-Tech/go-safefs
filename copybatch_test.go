@@ -96,11 +96,26 @@ func TestCopyTreeFollowingLinksKeepsTheMarkerUntilDone(t *testing.T) {
 	}
 }
 
+func TestCopyFileNoSyncThenFlush(t *testing.T) {
+	withSyncWrites(t)
+	dir := t.TempDir()
+	src := writeFile(t, dir, "src", "payload")
+	dst := filepath.Join(dir, "dst")
+	if err := CopyFileNoSync(src, dst, CopyOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := Flush(dir, []string{dst}, []string{dir}); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := os.ReadFile(dst); err != nil || string(got) != "payload" {
+		t.Fatalf("dst = %q, %v", got, err)
+	}
+}
+
 func TestSyncBatchFlushFallsBackToPerFileSync(t *testing.T) {
 	dir := t.TempDir()
 	p := writeFile(t, dir, "f", "x")
-	b := syncBatch{files: []string{p}, dirs: []string{dir}}
-	if err := b.flush(filepath.Join(dir, "missing")); err != nil {
+	if err := Flush(filepath.Join(dir, "missing"), []string{p}, []string{dir}); err != nil {
 		t.Fatal(err) // syncFS fails on a missing dir, so the per-file path ran
 	}
 }

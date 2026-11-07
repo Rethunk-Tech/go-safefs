@@ -54,16 +54,21 @@ func (b *syncBatch) finish(dst string) error {
 	return nil
 }
 
-// flush syncs the destination filesystem once where the OS can, else each written file and touched folder once.
-func (b *syncBatch) flush(dst string) error {
-	if err := syncFS(dst); err == nil {
+// flush is Flush over the batch's files.
+func (b *syncBatch) flush(dst string) error { return Flush(dst, b.files, b.dirs) }
+
+// Flush makes files written without a per-file fsync (CopyFileNoSync) durable together: one syncfs(2) on the
+// filesystem holding dir where the OS has it, else each file and each folder in dirs once. Pass every folder the
+// writes created or renamed into, since a file's rename lives in its folder.
+func Flush(dir string, files, dirs []string) error {
+	if err := syncFS(dir); err == nil {
 		return nil
 	}
 	var errs []error
-	for _, p := range b.files {
+	for _, p := range files {
 		errs = append(errs, syncFile(p))
 	}
-	for _, p := range b.dirs {
+	for _, p := range dirs {
 		errs = append(errs, SyncDir(p))
 	}
 	return errors.Join(errs...)
