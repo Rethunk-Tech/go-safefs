@@ -9,7 +9,7 @@ import (
 )
 
 func linkCount(path string) (uint64, error) {
-	fi, err := os.Lstat(path)
+	fi, err := os.Lstat(path) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 	if err != nil {
 		return 0, err
 	}

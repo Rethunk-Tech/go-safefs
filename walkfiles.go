@@ -38,6 +38,6 @@ func WalkRegular(root string, fn func(path string, d fs.DirEntry) error) error {
 }
 
 func pathExists(p string) bool {
-	_, err := os.Lstat(p)
+	_, err := os.Lstat(p) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 	return err == nil
 }

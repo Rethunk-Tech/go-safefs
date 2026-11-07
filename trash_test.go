@@ -98,7 +98,7 @@ func TestCopyAllCopiesAFileAndRefusesWhatCannotBeCopied(t *testing.T) {
 	if err := copyAll(src, filepath.Join(dir, "copy")); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := os.ReadFile(filepath.Join(dir, "copy")); err != nil || string(got) != "data" { //nolint:gosec // G304: a temp file this test made
+	if got, err := os.ReadFile(filepath.Join(dir, "copy")); err != nil || string(got) != "data" {
 		t.Fatalf("copy = %q, %v", got, err)
 	}
 	tree := filepath.Join(dir, "tree")

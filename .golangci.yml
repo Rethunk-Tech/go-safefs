@@ -64,6 +64,11 @@ linters:
       - path: (^rename.*\.go$|_test\.go$)
         linters:
           - forbidigo
+      # G302, G304 and G703 name a path an attacker controls; in a test it is the fixture's own path under t.TempDir().
+      - path: _test\.go$
+        linters:
+          - gosec
+        text: ^G(302|304|703)
       # canon go-golangci-lint-00017
       - path: _test\.go
         linters:

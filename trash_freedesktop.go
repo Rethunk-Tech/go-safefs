@@ -83,7 +83,7 @@ func moveAcross(from, to string) error {
 // copyAll copies a file or folder tree, keeping symlinks as links so the trashed copy restores as it was. Both
 // sides go through os.Root, so a link inside the tree is never followed out of it.
 func copyAll(from, to string) error {
-	info, err := os.Lstat(from)
+	info, err := os.Lstat(from) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 	if err != nil {
 		return err
 	}

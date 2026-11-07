@@ -38,7 +38,7 @@ func makeJunction(link, target string) error {
 	if err != nil {
 		return err
 	}
-	if err := os.Mkdir(link, 0o700); err != nil {
+	if err := os.Mkdir(link, 0o700); err != nil { //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 		return err
 	}
 	if err := setMountPoint(link, abs); err != nil {

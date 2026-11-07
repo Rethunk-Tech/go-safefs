@@ -9,7 +9,7 @@ import (
 // Shared reports whether path is a symlink or a file with other hard links: writing it would change the file another
 // folder holds too.
 func Shared(path string) bool {
-	fi, err := os.Lstat(path)
+	fi, err := os.Lstat(path) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 	if err != nil {
 		return false
 	}
@@ -25,7 +25,7 @@ func Unshare(path string) error {
 	if !Shared(path) {
 		return nil
 	}
-	src, err := os.Open(path) // #nosec G304 -- path is a file the caller names
+	src, err := os.Open(path) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 	if err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func Unshare(path string) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = os.Remove(tmp.Name()) }()
+	defer func() { _ = os.Remove(tmp.Name()) }() //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 	if _, err := io.Copy(tmp, src); err != nil {
 		_ = tmp.Close()
 		return err

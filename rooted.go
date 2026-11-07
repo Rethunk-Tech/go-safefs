@@ -175,7 +175,7 @@ func HashFile(path string, h hash.Hash) (string, error) {
 // IsFile is true when path resolves to a regular file. Unlike IsDir it uses os.Stat, so a symlink whose target
 // is outside path's folder (an executable linked from another library) still counts.
 func IsFile(path string) bool {
-	st, err := os.Stat(path)
+	st, err := os.Stat(path) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 	return err == nil && st.Mode().IsRegular()
 }
 
@@ -187,6 +187,6 @@ func Stat(path string) (fs.FileInfo, error) {
 // IsDir is true when path resolves to a directory. Like IsFile it follows a final symlink out of path's folder, so a
 // symlinked folder still counts.
 func IsDir(path string) bool {
-	st, err := os.Stat(path)
+	st, err := os.Stat(path) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 	return err == nil && st.IsDir()
 }

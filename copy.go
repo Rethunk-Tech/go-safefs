@@ -64,7 +64,7 @@ func CopyTree(src, dst string, opts CopyOptions) (skipped []string, err error) {
 		if err != nil {
 			return nil, err
 		}
-		err = filepath.WalkDir(src, func(_ string, d fs.DirEntry, walkErr error) error {
+		err = filepath.WalkDir(src, func(_ string, d fs.DirEntry, walkErr error) error { //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 			if walkErr != nil {
 				return walkErr
 			}
@@ -78,7 +78,7 @@ func CopyTree(src, dst string, opts CopyOptions) (skipped []string, err error) {
 		}
 	}
 	var batch syncBatch
-	if err = os.MkdirAll(dst, 0o750); err == nil {
+	if err = os.MkdirAll(dst, 0o750); err == nil { //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 		err = batch.begin(dst)
 	}
 	if err != nil {
@@ -106,7 +106,7 @@ func LinkedDir(p string, info os.FileInfo) bool {
 	if info.Mode()&os.ModeSymlink == 0 && info.Mode().IsRegular() {
 		return false
 	}
-	st, err := os.Stat(p)
+	st, err := os.Stat(p) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 	return err == nil && st.IsDir()
 }
 
@@ -172,7 +172,7 @@ func walkCopy(r *os.Root, src, dst string, opts CopyOptions, pass int, progress 
 			return err
 		}
 		if rel == "." {
-			return os.MkdirAll(dst, 0o750)
+			return os.MkdirAll(dst, 0o750) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 		}
 		if opts.First != "" && (strings.SplitN(rel, "/", 2)[0] == opts.First) != (pass == 0) {
 			if d.IsDir() {
@@ -191,7 +191,7 @@ func walkCopy(r *os.Root, src, dst string, opts CopyOptions, pass int, progress 
 				return fs.SkipDir
 			}
 			batch.dir(target)
-			return os.MkdirAll(target, 0o750)
+			return os.MkdirAll(target, 0o750) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 		}
 		if LinkedDir(p, info) {
 			*skipped = append(*skipped, p)
@@ -257,7 +257,7 @@ func UnderRoot(root, p string) bool {
 // RealDirUnder reports whether p is a directory whose own path still resolves under root, not a symlink
 // directory or a junction/reparse that points somewhere else.
 func RealDirUnder(root, p string) bool {
-	info, err := os.Lstat(p)
+	info, err := os.Lstat(p) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return false
 	}
@@ -370,7 +370,7 @@ func CopyTreeFollowingLinks(src, dst string, opts CopyOptions) (skipped []string
 				return fs.SkipDir
 			}
 			batch.dir(target)
-			return os.MkdirAll(target, 0o750)
+			return os.MkdirAll(target, 0o750) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 		}
 		if opts.Skip != nil && opts.Skip(info.Name()) {
 			return nil
@@ -397,7 +397,7 @@ func copyFollowing(r *os.Root, src, rel, p, target string, info fs.FileInfo, opt
 		} else if err != nil {
 			return err
 		}
-		if info, err = os.Stat(from); err != nil {
+		if info, err = os.Stat(from); err != nil { //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 			return err
 		}
 		if !info.Mode().IsRegular() {

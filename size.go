@@ -47,8 +47,8 @@ func size(dir string, dedupe bool) (int64, error) {
 		}
 		return nil
 	}
-	if st, err := os.Stat(dir); err != nil || !st.IsDir() {
-		err = filepath.WalkDir(dir, visit)
+	if st, err := os.Stat(dir); err != nil || !st.IsDir() { //nolint:gosec // G703: the caller names the path; taking one is this package's contract
+		err = filepath.WalkDir(dir, visit) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 		return total.Load(), err
 	}
 	ents, err := os.ReadDir(dir)
@@ -66,7 +66,7 @@ func size(dir string, dedupe bool) (int64, error) {
 		slots <- struct{}{}
 		wg.Go(func() {
 			defer func() { <-slots }()
-			_ = filepath.WalkDir(path, visit)
+			_ = filepath.WalkDir(path, visit) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 		})
 	}
 	wg.Wait()
