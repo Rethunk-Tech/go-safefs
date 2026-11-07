@@ -41,7 +41,11 @@ func (o CopyOptions) tempSuffix() string {
 	return o.TempSuffix
 }
 
-// CopyTree copies the regular files and folders under src into dst (which may exist), file by file. Directory
+// CopyTree copies the regular files and folders under src into dst (which may exist), file by file. Each file is
+// still renamed into place whole, but none is fsynced on its own: the copy is flushed once at the end (syncfs on
+// Linux, else each written file and folder once), which is what makes a thousand small files cost one flush. Until
+// then dst holds CopyMarker, so a crash is told from a finished copy by CopyInterrupted(dst); the same call again
+// replaces every file and clears it. Put's own writes are flushed by that final syncfs on Linux only. Directory
 // junctions, mount points and symlink directories are not followed, and are returned in skipped. Symlink files are
 // copied by content when they still resolve under src, and are an error when they escape.
 func CopyTree(src, dst string, opts CopyOptions) (skipped []string, err error) {
@@ -73,12 +77,22 @@ func CopyTree(src, dst string, opts CopyOptions) (skipped []string, err error) {
 			return nil, err
 		}
 	}
+	var batch syncBatch
+	if err = os.MkdirAll(dst, 0o750); err == nil {
+		err = batch.begin(dst)
+	}
+	if err != nil {
+		return nil, err
+	}
 	passes := 1
 	if opts.First != "" {
 		passes = 2
 	}
 	for pass := 0; pass < passes && err == nil; pass++ {
-		err = walkCopy(r, src, dst, opts, pass, &progress, opts.Put, root, &skipped)
+		err = walkCopy(r, src, dst, opts, pass, &progress, opts.Put, root, &skipped, &batch)
+	}
+	if err == nil {
+		err = batch.finish(dst)
 	}
 	return skipped, err
 }
@@ -152,7 +166,7 @@ func openLinkTarget(r *os.Root, src, root, p string) (*os.File, error) {
 
 // walkCopy is one walk of CopyTree through the root r on src, so no entry is opened by a path a swapped link could
 // redirect. In a two-pass copy, pass 0 takes only the first entry and pass 1 the rest.
-func walkCopy(r *os.Root, src, dst string, opts CopyOptions, pass int, progress *CopyProgress, put func(from, to, rel string) error, root string, skipped *[]string) error {
+func walkCopy(r *os.Root, src, dst string, opts CopyOptions, pass int, progress *CopyProgress, put func(from, to, rel string) error, root string, skipped *[]string, batch *syncBatch) error {
 	return fs.WalkDir(r.FS(), ".", func(rel string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -176,18 +190,19 @@ func walkCopy(r *os.Root, src, dst string, opts CopyOptions, pass int, progress 
 			if !RealDirUnder(root, p) {
 				return fs.SkipDir
 			}
+			batch.dir(target)
 			return os.MkdirAll(target, 0o750)
 		}
 		if LinkedDir(p, info) {
 			*skipped = append(*skipped, p)
 			return nil
 		}
-		return copyEntry(r, src, root, rel, p, target, info, opts, progress, put)
+		return copyEntry(r, src, root, rel, p, target, info, opts, progress, put, batch)
 	})
 }
 
 // copyEntry copies one non-directory entry of walkCopy: the open vets it, then it is written by copyFrom or put.
-func copyEntry(r *os.Root, src, root, rel, p, target string, info fs.FileInfo, opts CopyOptions, progress *CopyProgress, put func(from, to, rel string) error) error {
+func copyEntry(r *os.Root, src, root, rel, p, target string, info fs.FileInfo, opts CopyOptions, progress *CopyProgress, put func(from, to, rel string) error, batch *syncBatch) error {
 	isLink := info.Mode()&os.ModeSymlink != 0
 	if !isLink && !info.Mode().IsRegular() {
 		return fmt.Errorf("%s is not a regular file", p)
@@ -208,7 +223,7 @@ func copyEntry(r *os.Root, src, root, rel, p, target string, info fs.FileInfo, o
 		return fmt.Errorf("%s is not a regular file", p)
 	}
 	if put == nil {
-		if err := copyFrom(f, target, opts); err != nil {
+		if err := copyFrom(f, target, opts, batch); err != nil {
 			return err
 		}
 	} else {
@@ -268,11 +283,12 @@ func CopyFile(src, dst string, opts CopyOptions) (err error) {
 		return err
 	}
 	defer func() { _ = in.Close() }()
-	return copyFrom(in, dst, opts)
+	return copyFrom(in, dst, opts, nil)
 }
 
-// copyFrom is CopyFile's body over an already open source.
-func copyFrom(in *os.File, dst string, opts CopyOptions) (err error) {
+// copyFrom is CopyFile's body over an already open source. A non-nil batch skips the per-file fsync and records the
+// file for the batch's final flush instead.
+func copyFrom(in *os.File, dst string, opts CopyOptions, batch *syncBatch) (err error) {
 	info, err := in.Stat()
 	if err != nil {
 		return err
@@ -290,13 +306,16 @@ func copyFrom(in *os.File, dst string, opts CopyOptions) (err error) {
 			_ = Remove(tmp)
 		}
 	}()
-	if _, err = io.Copy(out, in); err == nil {
+	if _, err = io.Copy(out, in); err == nil && batch == nil {
 		err = out.Sync()
 	}
 	if err = errors.Join(err, out.Close()); err != nil {
 		return err
 	}
-	return Rename(tmp, dst)
+	if err = Rename(tmp, dst); err == nil && batch != nil {
+		batch.file(dst)
+	}
+	return err
 }
 
 // DanglingLinkError is CopyTreeFollowingLinks' refusal of a file link whose target is gone.
@@ -326,6 +345,13 @@ func CopyTreeFollowingLinks(src, dst string, opts CopyOptions) (skipped []string
 	if err != nil {
 		return nil, err
 	}
+	var batch syncBatch
+	if err = os.MkdirAll(dst, 0o750); err == nil {
+		err = batch.begin(dst)
+	}
+	if err != nil {
+		return nil, err
+	}
 	err = fs.WalkDir(r.FS(), ".", func(rel string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -343,6 +369,7 @@ func CopyTreeFollowingLinks(src, dst string, opts CopyOptions) (skipped []string
 			if !RealDirUnder(root, p) {
 				return fs.SkipDir
 			}
+			batch.dir(target)
 			return os.MkdirAll(target, 0o750)
 		}
 		if opts.Skip != nil && opts.Skip(info.Name()) {
@@ -352,13 +379,16 @@ func CopyTreeFollowingLinks(src, dst string, opts CopyOptions) (skipped []string
 			skipped = append(skipped, p)
 			return nil
 		}
-		return copyFollowing(r, src, rel, p, target, info, opts)
+		return copyFollowing(r, src, rel, p, target, info, opts, &batch)
 	})
+	if err == nil {
+		err = batch.finish(dst)
+	}
 	return skipped, err
 }
 
 // copyFollowing copies one non-directory entry of CopyTreeFollowingLinks, following a file link by path.
-func copyFollowing(r *os.Root, src, rel, p, target string, info fs.FileInfo, opts CopyOptions) error {
+func copyFollowing(r *os.Root, src, rel, p, target string, info fs.FileInfo, opts CopyOptions, batch *syncBatch) error {
 	if info.Mode()&os.ModeSymlink != 0 {
 		// A file link is followed wherever it points, by design, so it is read by path.
 		from, err := EvalSymlinks(p)
@@ -373,7 +403,12 @@ func copyFollowing(r *os.Root, src, rel, p, target string, info fs.FileInfo, opt
 		if !info.Mode().IsRegular() {
 			return fmt.Errorf("%s is not a regular file", p)
 		}
-		return CopyFile(from, target, opts)
+		in, err := Open(from)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = in.Close() }()
+		return copyFrom(in, target, opts, batch)
 	}
 	if !info.Mode().IsRegular() {
 		return fmt.Errorf("%s is not a regular file", p)
@@ -383,5 +418,5 @@ func copyFollowing(r *os.Root, src, rel, p, target string, info fs.FileInfo, opt
 		return err
 	}
 	defer func() { _ = f.Close() }()
-	return copyFrom(f, target, opts)
+	return copyFrom(f, target, opts, batch)
 }
