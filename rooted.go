@@ -27,6 +27,34 @@ func Within[T any](path string, fn func(dir *os.Root, name string) (T, error)) (
 	return fn(root, filepath.Base(path))
 }
 
+// ErrOutsideRoot is WithinRoot's refusal of a path that is not below its root.
+var ErrOutsideRoot = errors.New("path is outside the root")
+
+// WithinRoot is Within for a path the caller keeps below root: every element between root and path's last is
+// resolved inside root, so a symlink in the middle that leads out of root is refused, which Within, resolving
+// the parent folder through the operating system, does not do. root itself is resolved by the operating system, as
+// the caller chose it. A path that is not strictly below root is ErrOutsideRoot.
+func WithinRoot[T any](root, path string, fn func(dir *os.Root, name string) (T, error)) (T, error) {
+	var zero T
+	rel, err := filepath.Rel(filepath.Clean(root), filepath.Clean(path))
+	if err != nil || rel == "." || !filepath.IsLocal(rel) {
+		return zero, &fs.PathError{Op: "within", Path: path, Err: ErrOutsideRoot}
+	}
+	top, err := os.OpenRoot(root)
+	if err != nil {
+		return zero, err
+	}
+	defer func() { _ = top.Close() }()
+	dir := top
+	if parent := filepath.Dir(rel); parent != "." {
+		if dir, err = top.OpenRoot(parent); err != nil {
+			return zero, err
+		}
+		defer func() { _ = dir.Close() }()
+	}
+	return fn(dir, filepath.Base(rel))
+}
+
 // Open opens path for reading.
 func Open(path string) (*os.File, error) {
 	return Within(path, func(r *os.Root, name string) (*os.File, error) { return r.Open(name) })

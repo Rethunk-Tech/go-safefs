@@ -31,7 +31,7 @@ Please do not open a public issue for a suspected vulnerability first.
 ## What is out of scope
 
 - The caller chooses `path` and the roots. `Within` confines only the last element: a symlink in an earlier element
-  is followed, as the operating system does. Confine a whole tree with `os.Root`.
+  is followed, as the operating system does, because a path through a symlinked home or data folder is ordinary. Use `WithinRoot` for a path that must stay below a root: it resolves every element between the root and the last inside the root and refuses a link that leaves it.
 - `IsFile`, `IsDir`, `Shared` and `Size` follow links by design, and `CopyTreeFollowingLinks` copies a linked file
   from wherever it points.
 - `CopyFile` removes a stale file named `dst+TempSuffix` before writing; choose a suffix no real file carries.

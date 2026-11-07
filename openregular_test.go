@@ -69,3 +69,34 @@ func TestRootedCallsRefuseASymlinkedFinalElementLeadingOut(t *testing.T) {
 		t.Fatal("Within followed the link out")
 	}
 }
+
+func TestWithinRootRefusesALinkedFolderOutTheRoot(t *testing.T) {
+	root, evil := t.TempDir(), t.TempDir()
+	if err := os.Symlink(evil, filepath.Join(root, "Foo")); err != nil {
+		t.Skip(err)
+	}
+	write := func(r *os.Root, name string) (struct{}, error) {
+		return struct{}{}, r.WriteFile(name, []byte("x"), 0o600)
+	}
+	target := filepath.Join(root, "Foo", "x.dll")
+	if _, err := WithinRoot(root, target, write); err == nil {
+		t.Fatal("WithinRoot wrote through a link that leaves the root")
+	}
+	if _, err := os.Stat(filepath.Join(evil, "x.dll")); err == nil {
+		t.Fatal("the file landed outside the root")
+	}
+	if _, err := Within(target, write); err != nil {
+		t.Fatalf("Within no longer follows the parent folder as documented: %v", err)
+	}
+	for _, p := range []string{root, filepath.Join(root, "..", "x"), filepath.Join(evil, "y")} {
+		if _, err := WithinRoot(root, p, write); !errors.Is(err, ErrOutsideRoot) {
+			t.Errorf("WithinRoot(%q) = %v, want ErrOutsideRoot", p, err)
+		}
+	}
+	if err := os.MkdirAll(filepath.Join(root, "real", "sub"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := WithinRoot(root, filepath.Join(root, "real", "sub", "f"), write); err != nil {
+		t.Fatalf("a path inside the root was refused: %v", err)
+	}
+}

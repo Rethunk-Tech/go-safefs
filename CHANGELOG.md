@@ -6,6 +6,10 @@ Notable changes to `go-safefs`. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `WithinRoot` and `ErrOutsideRoot`: `Within` for a path that must stay below a root, refusing an intermediate symlink that leaves it.
+
 ### Changed
 
 - `CopyTreeFollowingLinks` returns `(skipped []string, err error)` like `CopyTree`, listing the linked folders it leaves out. Callers add the extra result.
