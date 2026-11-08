@@ -12,45 +12,45 @@ go get github.com/Rethunk-Tech/go-safefs
 package main
 
 import (
-	"errors"
-	"fmt"
-	"os"
-	"time"
+ "errors"
+ "fmt"
+ "os"
+ "time"
 
-	"github.com/Rethunk-Tech/go-safefs"
-	"github.com/Rethunk-Tech/go-safefs/diskcache"
+ "github.com/Rethunk-Tech/go-safefs"
+ "github.com/Rethunk-Tech/go-safefs/diskcache"
 )
 
 func main() {
-	// Read a file someone else placed: at most 1 MiB, and a symlinked last element is refused.
-	f, err := safefs.OpenRegular("config.json")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	data, err := safefs.ReadCapped(f, 1<<20)
-	_ = f.Close()
-	if errors.Is(err, safefs.ErrTooLarge) {
-		fmt.Println("config.json is over 1 MiB")
-		return
-	}
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+ // Read a file someone else placed: at most 1 MiB, and a symlinked last element is refused.
+ f, err := safefs.OpenRegular("config.json")
+ if err != nil {
+  fmt.Println(err)
+  return
+ }
+ data, err := safefs.ReadCapped(f, 1<<20)
+ _ = f.Close()
+ if errors.Is(err, safefs.ErrTooLarge) {
+  fmt.Println("config.json is over 1 MiB")
+  return
+ }
+ if err != nil {
+  fmt.Println(err)
+  return
+ }
 
-	// Replace a file so a crash leaves the old one or the new one, never half of either.
-	if err := safefs.WriteFileAtomic("state.json", data, 0o600); err != nil {
-		fmt.Println(err)
-		return
-	}
+ // Replace a file so a crash leaves the old one or the new one, never half of either.
+ if err := safefs.WriteFileAtomic("state.json", data, 0o600); err != nil {
+  fmt.Println(err)
+  return
+ }
 
-	// Cache a fetched answer for an hour; a failed fetch falls back to the stale entry.
-	cache := &diskcache.Cache{Dir: os.TempDir()}
-	version, err := diskcache.Cached(cache, "latest.json", time.Hour, func() (string, error) {
-		return "1.2.3", nil
-	})
-	fmt.Println(version, err)
+ // Cache a fetched answer for an hour; a failed fetch falls back to the stale entry.
+ cache := &diskcache.Cache{Dir: os.TempDir()}
+ version, err := diskcache.Cached(cache, "latest.json", time.Hour, func() (string, error) {
+  return "1.2.3", nil
+ })
+ fmt.Println(version, err)
 }
 ```
 
@@ -78,6 +78,7 @@ default.
 | `Trash` | Freedesktop trash or the Recycle Bin; `errors.ErrUnsupported` on darwin. On Windows a folder another program holds fails with `ErrInUse`. |
 | `Holders` | Windows only: the programs with any of the given files or folders open (a folder's holders include a program whose current folder it is, not what is open inside it), named as Windows shows them, never the calling process. |
 | `CheckWritable` | `nil` for a missing directory, else the probe's `*fs.PathError`. |
+| `IsDiskFull` | True for a write that ran out of space (ENOSPC, EDQUOT where it exists, Windows ERROR_DISK_FULL / ERROR_HANDLE_DISK_FULL). |
 | `diskcache.Cached`, `CachedStamped` | Fetch when the entry is missing, old, from the future or stamped differently; a failed fetch falls back to the stale entry. Never returns a cache error. A name that is not local to `Dir` (absolute, or `..`) is never read or written. |
 | `diskcache.Peek`, `Fresh`, `Put`, `PutEntry` | A file with no `"fetched"` or no `"value"` key reads as absent; `"value": null` is present. Write errors are dropped. |
 

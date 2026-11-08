@@ -62,4 +62,5 @@ so those tests probe and skip on the runners; CI proves the fallback only.
 | `trash_freedesktop.go`, `trash_windows.go`, `trash_darwin.go` | `Trash` per OS; on Windows, SHFileOperation's codes as errors |
 | `holders.go`, `holders_windows.go`, `holders_other.go` | `ErrInUse`, `Holder`, `Holders` (Windows only) |
 | `writable.go` | `CheckWritable` |
+| `diskfull.go`, `diskfull_*.go` | `IsDiskFull` |
 | `diskcache/cache.go` | `Cache`, `Entry` and the cached-answer functions |

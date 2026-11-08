@@ -6,6 +6,10 @@ Notable changes to `go-safefs`. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `IsDiskFull`, true for a write that ran out of space (ENOSPC, EDQUOT where it exists, and Windows ERROR_DISK_FULL / ERROR_HANDLE_DISK_FULL).
+
 ## [0.8.0] - 2026-11-07
 
 ### Added

@@ -29,6 +29,7 @@ A worked example and the contracts: [HUMANS.md](HUMANS.md).
 - Rename and remove that retry on Windows while a scanner or indexer holds the file.
 - Writes, copies and clones that a crash leaves whole or absent, and a materialiser that picks the cheapest sharing.
 - `ResolveFold`, which finds a path written for Windows on a case-sensitive file system.
+- `IsDiskFull`, true when a write ran out of space or quota.
 - `diskcache`, typed JSON cache files where a crash or a stale shape only costs a refetch.
 
 ## Documentation
