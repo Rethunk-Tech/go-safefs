@@ -65,19 +65,14 @@ var ErrNotRegular = errors.New("not a regular file")
 
 // OpenRegular opens path for reading, refusing anything but a regular file.
 func OpenRegular(path string) (*os.File, error) {
-	f, err := Open(path)
+	info, err := os.Lstat(path) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 	if err != nil {
 		return nil, err
 	}
-	info, err := f.Stat()
-	if err == nil && !info.Mode().IsRegular() {
-		err = ErrNotRegular
+	if !info.Mode().IsRegular() {
+		return nil, ErrNotRegular
 	}
-	if err != nil {
-		_ = f.Close()
-		return nil, err
-	}
-	return f, nil
+	return Open(path)
 }
 
 // Create creates or truncates path.
@@ -161,7 +156,7 @@ func WriteFile(path string, data []byte, perm fs.FileMode) error {
 
 // HashFile is the hex digest of path's contents under h.
 func HashFile(path string, h hash.Hash) (string, error) {
-	f, err := Open(path)
+	f, err := OpenRegular(path)
 	if err != nil {
 		return "", err
 	}

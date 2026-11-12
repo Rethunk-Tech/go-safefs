@@ -3,10 +3,13 @@
 package safefs
 
 import (
+	"crypto/sha256"
+	"errors"
 	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 )
 
 // A pipe has no bytes to copy and reading one could block, so both tree copies refuse it; a missing source fails
@@ -37,5 +40,28 @@ func TestTreeCopiesRefuseWhatIsNotAFile(t *testing.T) {
 	skip := CopyOptions{Skip: func(name string) bool { return name == "pipe" }}
 	if _, err := CopyTreeFollowingLinks(src, t.TempDir(), skip); err != nil {
 		t.Errorf("a skipped pipe still failed: %v", err)
+	}
+}
+
+func TestCopyFileAndHashFileRefuseAFifo(t *testing.T) {
+	dir := t.TempDir()
+	pipe := filepath.Join(dir, "pipe")
+	if err := syscall.Mkfifo(pipe, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 2)
+	go func() { done <- CopyFile(pipe, filepath.Join(dir, "out"), CopyOptions{}) }()
+	go func() { _, err := HashFile(pipe, sha256.New()); done <- err }()
+	timer := time.NewTimer(2 * time.Second)
+	defer timer.Stop()
+	for range 2 {
+		select {
+		case err := <-done:
+			if !errors.Is(err, ErrNotRegular) {
+				t.Errorf("err = %v, want ErrNotRegular", err)
+			}
+		case <-timer.C:
+			t.Fatal("blocked on a FIFO")
+		}
 	}
 }

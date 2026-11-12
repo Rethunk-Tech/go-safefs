@@ -282,7 +282,7 @@ func RealDirUnder(root, p string) bool {
 // CopyFile copies the regular file src to dst, replacing what is there. The bytes go to a temporary file beside dst,
 // are flushed to disk, and only then renamed into place, so a crash leaves dst whole or absent, never truncated.
 func CopyFile(src, dst string, opts CopyOptions) (err error) {
-	in, err := Open(src)
+	in, err := OpenRegular(src)
 	if err != nil {
 		return err
 	}
@@ -326,7 +326,7 @@ func copyFrom(in *os.File, dst string, opts CopyOptions, batch *syncBatch) (err 
 // until the caller runs Flush over it, so after a crash it can be short or empty. For a caller that places many files,
 // records progress only after one Flush, and redoes whatever the record does not cover.
 func CopyFileNoSync(src, dst string, opts CopyOptions) error {
-	in, err := Open(src)
+	in, err := OpenRegular(src)
 	if err != nil {
 		return err
 	}
