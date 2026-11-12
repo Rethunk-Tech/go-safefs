@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"syscall"
 )
 
@@ -34,12 +35,7 @@ func mountedDir(src, p string) bool {
 		if aerr != nil {
 			return false
 		}
-		for _, m := range mounts {
-			if m == abs {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(mounts, abs)
 	}
 	srcDev, e1 := Device(src)
 	pDev, e2 := Device(p)
