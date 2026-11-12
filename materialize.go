@@ -1,6 +1,8 @@
 package safefs
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
@@ -107,6 +109,11 @@ func (m Materializer) put(ops tierOps, useCache bool, src, dst, rel string) erro
 			continue
 		}
 		err := fn(src, dst)
+		if errors.Is(err, fs.ErrExist) {
+			if rerr := Remove(dst); rerr == nil {
+				err = fn(src, dst)
+			}
+		}
 		if err == nil {
 			if caps != nil && t != TierCopy {
 				caps[t-1].Store(1)

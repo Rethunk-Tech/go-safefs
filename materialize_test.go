@@ -267,3 +267,20 @@ func TestMaterializerRemembersWhatADeviceRefused(t *testing.T) {
 		t.Fatalf("clone tried %d times; the refusal was not remembered", cloneCalls)
 	}
 }
+
+func TestMaterializeFileReplacesAnExistingDestination(t *testing.T) {
+	dir := t.TempDir()
+	src, dst := filepath.Join(dir, "src"), filepath.Join(dir, "dst")
+	writeAt(t, src, "hello")
+	m := Materializer{}
+	if err := m.File(src, dst, "f"); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.File(src, dst, "f"); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(dst)
+	if err != nil || string(got) != "hello" {
+		t.Fatalf("got %q, %v", got, err)
+	}
+}
