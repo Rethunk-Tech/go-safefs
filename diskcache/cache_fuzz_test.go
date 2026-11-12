@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -50,10 +51,19 @@ func FuzzPeek(f *testing.F) {
 		if !ok {
 			t.Fatal("round-trip missed a present entry")
 		}
-		if !got.Fetched.Equal(e.Fetched) || got.Stamp != e.Stamp || string(got.Value) != string(e.Value) {
+		if !got.Fetched.Equal(e.Fetched) || got.Stamp != e.Stamp || !sameJSON(got.Value, e.Value) {
 			t.Fatalf("round-trip = %+v, want %+v", got, e)
 		}
 	})
+}
+
+// sameJSON compares values by meaning: encoding/json rewrites a RawMessage's HTML characters as \u escapes on write.
+func sameJSON(a, b json.RawMessage) bool {
+	if string(a) == string(b) {
+		return true
+	}
+	var x, y any
+	return json.Unmarshal(a, &x) == nil && json.Unmarshal(b, &y) == nil && reflect.DeepEqual(x, y)
 }
 
 func FuzzPath(f *testing.F) {
