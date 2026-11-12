@@ -60,7 +60,7 @@ func CopyTree(src, dst string, opts CopyOptions) (skipped []string, err error) {
 	}
 	var progress CopyProgress
 	if opts.Progress != nil {
-		progress.TotalBytes, err = Size(src)
+		progress.TotalBytes, err = SizeEachName(src)
 		if err != nil {
 			return nil, err
 		}

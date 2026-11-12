@@ -214,6 +214,21 @@ func TestCopyTreeProgressAndFirstEntry(t *testing.T) {
 	}
 }
 
+func TestCopyTreeProgressCountsHardLinkedNames(t *testing.T) {
+	src := t.TempDir()
+	a := writeFile(t, src, "a", strings.Repeat("x", 100))
+	if err := os.Link(a, filepath.Join(src, "b")); err != nil {
+		t.Skip("no hard links here")
+	}
+	var last CopyProgress
+	if _, err := CopyTree(src, t.TempDir(), CopyOptions{Progress: func(p CopyProgress) { last = p }}); err != nil {
+		t.Fatal(err)
+	}
+	if last.Bytes != last.TotalBytes {
+		t.Fatalf("progress = %+v", last)
+	}
+}
+
 func TestDanglingLinkErrorNamesTheLink(t *testing.T) {
 	err := &DanglingLinkError{Rel: "a/link", Err: os.ErrNotExist}
 	if !strings.Contains(err.Error(), "a/link") || !errors.Is(err, os.ErrNotExist) {
