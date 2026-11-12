@@ -73,6 +73,9 @@ func moveAcross(from, to string) error {
 	if !errors.Is(err, syscall.EXDEV) {
 		return err
 	}
+	if err := checkNoMountsInside(from); err != nil {
+		return err
+	}
 	if err := copyAll(from, to); err != nil {
 		_ = os.RemoveAll(to) // #nosec G703 -- the partial copy just made in the user's own trash
 		return err
