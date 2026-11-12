@@ -165,3 +165,33 @@ func TestTrashAcrossFilesystemsKeepsALinkAsALinkAndRefusesAPipe(t *testing.T) {
 		t.Fatalf("the refused pipe is gone: %v", err)
 	}
 }
+
+func TestTrashKeepsTrashinfoWhenTheOriginalCannotBeDeleted(t *testing.T) {
+	data := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", data)
+	src := filepath.Join("/dev/shm", "safefs-trash-ro-"+strconv.Itoa(os.Getpid()))
+	if err := os.Mkdir(src, 0o700); err != nil {
+		t.Skip("no /dev/shm:", err)
+	}
+	var a, b syscall.Stat_t
+	if syscall.Stat(src, &a) != nil || syscall.Stat(data, &b) != nil || a.Dev == b.Dev {
+		_ = os.RemoveAll(src)
+		t.Skip("/dev/shm and the test's temp folder are one filesystem")
+	}
+	dir := filepath.Join(src, "Mod")
+	locked := filepath.Join(dir, "locked")
+	writeAt(t, filepath.Join(locked, "file"), "x")
+	if err := os.Chmod(locked, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chmod(locked, 0o700)
+		_ = os.RemoveAll(src)
+	})
+	if err := Trash(dir); err == nil {
+		t.Fatal("Trash deleted a folder that is not writable")
+	}
+	if _, err := os.Stat(filepath.Join(data, "Trash", "info", "Mod.trashinfo")); err != nil {
+		t.Fatalf("trashinfo: %v", err)
+	}
+}

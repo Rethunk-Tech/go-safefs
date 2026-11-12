@@ -60,7 +60,9 @@ func Trash(path string) error {
 			werr = moveAcross(abs, filepath.Join(files, name))
 		}
 		if werr != nil {
-			_ = os.Remove(record) // #nosec G703 -- the record just written in the user's own trash
+			if _, err := os.Lstat(filepath.Join(files, name)); err != nil {
+				_ = os.Remove(record) // #nosec G703 -- the record just written in the user's own trash
+			}
 			return fmt.Errorf("moving %s to the trash: %w", abs, werr)
 		}
 		return nil
