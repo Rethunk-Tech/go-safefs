@@ -54,11 +54,11 @@ so those tests probe and skip on the runners; CI proves the fallback only.
 | `write.go`, `syncdir_*.go` | Atomic and no-sync writers, `SyncDir` |
 | `copy.go` | `CopyOptions`, `CopyFile`, `CopyTree`, `CopyTreeFollowingLinks`, `UnderRoot`, `RealDirUnder`, `LinkedDir` |
 | `clone_linux.go`, `clone_darwin.go`, `clone_windows.go`, `clone_stub.go` | `Clone`, `LinkUnsupported`, `Device` per OS |
-| `inode_*.go` | `HardLinkID` and `FileID` |
+| `inode_*.go` | `HardLinkID` |
 | `links.go`, `links_unix.go`, `links_windows.go` | `Shared`, `Unshare` and the link-count read |
 | `link_unix.go`, `link_windows.go` | `LinkDir`: symlink, or an unprivileged junction on Windows |
 | `materialize.go` | `Materializer`, `Tier` and the per-device refusal memory |
-| `size.go`, `free_*.go` | `Size`, `SizeEachName`, `FreeBytes` |
+| `size.go`, `free_*.go` | `Size`, `SizeEachName`, `FreeBytes`, `FileID` |
 | `trash_freedesktop.go`, `trash_windows.go`, `trash_darwin.go` | `Trash` per OS; on Windows, SHFileOperation's codes as errors |
 | `holders.go`, `holders_windows.go`, `holders_other.go` | `ErrInUse`, `Holder`, `Holders` (Windows only) |
 | `writable.go` | `CheckWritable` |
