@@ -22,6 +22,30 @@ func checkNoMountsInside(path string) error {
 	return nil
 }
 
+// mountedDir reports whether p is a mount point under src: listed in the mount table when that is readable, else a
+// directory whose device id differs from src's.
+func mountedDir(src, p string) bool {
+	if p == src {
+		return false
+	}
+	mounts, err := mountsBelow(src)
+	if err == nil {
+		abs, aerr := filepath.Abs(p)
+		if aerr != nil {
+			return false
+		}
+		for _, m := range mounts {
+			if m == abs {
+				return true
+			}
+		}
+		return false
+	}
+	srcDev, e1 := Device(src)
+	pDev, e2 := Device(p)
+	return e1 == nil && e2 == nil && srcDev != pDev
+}
+
 func checkDir(path string, info fs.FileInfo) error {
 	if mounts, err := mountsBelow(path); err == nil {
 		if len(mounts) > 0 {

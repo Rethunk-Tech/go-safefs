@@ -187,6 +187,10 @@ func walkCopy(r *os.Root, src, dst string, opts CopyOptions, pass int, progress 
 		p := filepath.Join(src, filepath.FromSlash(rel))
 		target := filepath.Join(dst, filepath.FromSlash(rel))
 		if info.IsDir() {
+			if mountedDir(src, p) {
+				*skipped = append(*skipped, p)
+				return fs.SkipDir
+			}
 			if !RealDirUnder(root, p) {
 				return fs.SkipDir
 			}
@@ -378,6 +382,10 @@ func CopyTreeFollowingLinks(src, dst string, opts CopyOptions) (skipped []string
 		p := filepath.Join(src, filepath.FromSlash(rel))
 		target := filepath.Join(dst, filepath.FromSlash(rel))
 		if info.IsDir() {
+			if mountedDir(src, p) {
+				skipped = append(skipped, p)
+				return fs.SkipDir
+			}
 			if !RealDirUnder(root, p) {
 				return fs.SkipDir
 			}
