@@ -138,3 +138,19 @@ func TestTreeCopiesDoNotBlockOnAPipeSwappedIn(t *testing.T) {
 		t.Logf("%s: %d copies, %d refusals", name, copied, refused)
 	}
 }
+
+// The atomic writers create their file the way os.WriteFile does, so the process umask narrows the requested bits.
+func TestAtomicWritersApplyTheUmask(t *testing.T) {
+	defer syscall.Umask(syscall.Umask(0o022))
+	path := filepath.Join(t.TempDir(), "f")
+	if err := WriteFileAtomic(path, []byte("x"), 0o666); err != nil {
+		t.Fatal(err)
+	}
+	fi, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := fi.Mode().Perm(); got != 0o644 {
+		t.Fatalf("mode %v, want -rw-r--r--", got)
+	}
+}
