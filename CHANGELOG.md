@@ -10,6 +10,10 @@ Notable changes to `go-safefs`. The format follows
 
 - `WriteFileAtomic`, `WriteStreamAtomic` and `WriteStreamNoSync` let the umask narrow `perm`, as `os.WriteFile` does, instead of setting it verbatim: `0o666` no longer creates a world-writable file. A caller that passes an existing file's mode to keep it gets that mode minus the umask.
 
+### Fixed
+
+- The copy fallback that opens a file by path judges containment by the opened handle (its final path on Windows, its identity elsewhere), so a link swapped back after the open no longer passes a file outside the source.
+
 ## [0.9.0] - 2026-11-08
 
 ### Added

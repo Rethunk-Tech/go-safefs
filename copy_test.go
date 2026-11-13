@@ -271,21 +271,36 @@ func TestCopyTreeFollowingLinksReportsLinkedFolders(t *testing.T) {
 	}
 }
 
-func TestResolvesUnderRefusesALinkedFolderOutside(t *testing.T) {
+func TestOpenUnderRefusesALinkedFolderOutside(t *testing.T) {
 	src, outside := t.TempDir(), t.TempDir()
 	writeFile(t, src, "in/a", "a")
 	writeFile(t, outside, "b", "b")
 	if err := os.Symlink(outside, filepath.Join(src, "out")); err != nil {
 		t.Skip(err)
 	}
-	if !resolvesUnder(src, filepath.Join(src, "in", "a")) {
-		t.Error("a file inside was refused")
+	f, err := openUnder(src, filepath.Join(src, "in", "a"))
+	if err != nil {
+		t.Fatalf("a file inside was refused: %v", err)
 	}
-	if resolvesUnder(src, filepath.Join(src, "out", "b")) {
-		t.Error("a file reached through a link out of src was accepted")
-	}
+	_ = f.Close()
 	if f, err := openUnder(src, filepath.Join(src, "out", "b")); err == nil {
 		_ = f.Close()
 		t.Error("openUnder opened a file outside src")
+	}
+}
+
+// A path swapped back to a file inside after the open still leaves the handle on the file outside; the check reads
+// the handle, so the path's answer cannot vouch for it.
+func TestHeldUnderJudgesTheHandleNotThePath(t *testing.T) {
+	src, outside := t.TempDir(), t.TempDir()
+	writeFile(t, src, "a", "a")
+	writeFile(t, outside, "b", "b")
+	f, err := os.Open(filepath.Join(outside, "b"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = f.Close() }()
+	if heldUnder(src, filepath.Join(src, "a"), f) {
+		t.Error("a handle on a file outside src was accepted because the path now resolves inside")
 	}
 }

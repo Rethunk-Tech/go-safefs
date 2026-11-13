@@ -129,28 +129,18 @@ func openIn(r *os.Root, src, rel string) (*os.File, error) {
 	return f, err
 }
 
-// openUnder opens p by path, which the root cannot confine, and then checks that what was opened still lies under
-// src: a folder swapped for a link between the existence check and the open is refused instead of read.
+// openUnder opens p by path, which the root cannot confine, and then checks that the file it holds lies under src: a
+// folder swapped for a link around the open is refused instead of read.
 func openUnder(src, p string) (*os.File, error) {
 	f, err := OpenRegular(p)
 	if err != nil {
 		return nil, err
 	}
-	if !resolvesUnder(src, p) {
+	if !heldUnder(src, p, f) {
 		_ = f.Close()
 		return nil, fmt.Errorf("%s escapes %s", p, src)
 	}
 	return f, nil
-}
-
-// resolvesUnder reports whether p, with every link resolved, is inside src with every link resolved.
-func resolvesUnder(src, p string) bool {
-	root, err := EvalSymlinks(src)
-	if err != nil {
-		return false
-	}
-	resolved, err := EvalSymlinks(p)
-	return err == nil && UnderRoot(root, resolved)
 }
 
 // openLinkTarget opens the file the link p leads to when the root refused the link itself: os.Root treats an
