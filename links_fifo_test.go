@@ -24,7 +24,8 @@ func TestUnshareOfALinkToAPipeReturnsInsteadOfBlocking(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- Unshare(link) }()
 	select {
-	case <-done:
+	case err := <-done:
+		t.Log(err)
 	case <-time.After(2 * time.Second):
 		t.Fatal("Unshare blocked opening a pipe")
 	}
