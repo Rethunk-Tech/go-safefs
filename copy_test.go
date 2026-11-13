@@ -80,6 +80,27 @@ func TestCopyTreeSkipsASymlinkDirectory(t *testing.T) {
 	}
 }
 
+func TestRealDirUnderARootReachedThroughALink(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(t.TempDir(), "root")
+	if err := os.Symlink(dir, root); err != nil {
+		t.Skip(err)
+	}
+	if !RealDirUnder(root, filepath.Join(root, "sub")) {
+		t.Fatal("a real folder under a linked root was refused")
+	}
+	if err := os.Symlink(t.TempDir(), filepath.Join(dir, "out")); err != nil {
+		t.Fatal(err)
+	}
+	if RealDirUnder(root, filepath.Join(root, "out")) {
+		t.Fatal("a linked folder leading out was accepted")
+	}
+}
+
 func TestUnderRoot(t *testing.T) {
 	if !UnderRoot("/", "/etc") {
 		t.Fatal("path under filesystem root")

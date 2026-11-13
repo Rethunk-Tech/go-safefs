@@ -260,8 +260,8 @@ func UnderRoot(root, p string) bool {
 	return err == nil && filepath.IsLocal(rel)
 }
 
-// RealDirUnder reports whether p is a directory whose own path still resolves under root, not a symlink
-// directory or a junction/reparse that points somewhere else.
+// RealDirUnder reports whether p is a directory whose own path still resolves under root (itself resolved), not a
+// symlink directory or a junction/reparse that points somewhere else.
 func RealDirUnder(root, p string) bool {
 	info, err := os.Lstat(p) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
@@ -278,7 +278,8 @@ func RealDirUnder(root, p string) bool {
 	if filepath.Clean(resolved) != filepath.Clean(filepath.Join(parent, filepath.Base(p))) {
 		return false
 	}
-	return UnderRoot(root, resolved)
+	realRoot, err := EvalSymlinks(root)
+	return err == nil && UnderRoot(realRoot, resolved)
 }
 
 // CopyFile copies the regular file src to dst, replacing what is there. The bytes go to a temporary file beside dst,
