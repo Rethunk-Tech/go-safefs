@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 )
 
 // Shared reports whether path is a symlink or a file with other hard links: writing it would change the file another
@@ -25,7 +26,7 @@ func Unshare(path string) error {
 	if !Shared(path) {
 		return nil
 	}
-	src, err := os.Open(path) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
+	src, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0) //nolint:gosec // G703: the caller names the path; taking one is this package's contract; O_NONBLOCK keeps a pipe from blocking the open
 	if err != nil {
 		return err
 	}
