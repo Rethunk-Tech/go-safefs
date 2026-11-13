@@ -45,6 +45,10 @@ func Trash(path string) error {
 			name = base + "." + strconv.Itoa(i)
 		}
 		record := filepath.Join(info, name+".trashinfo")
+		// A trashed file whose record was lost still holds someone's data; rename would silently replace it.
+		if _, err := os.Lstat(filepath.Join(files, name)); err == nil { // #nosec G703 -- the user's own trash
+			continue
+		}
 		f, err := os.OpenFile(record, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600) // #nosec G304 G703 -- a new record in the user's own trash
 		if errors.Is(err, os.ErrExist) {
 			continue
