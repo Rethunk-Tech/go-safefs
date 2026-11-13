@@ -12,8 +12,8 @@ import (
 // with EEXIST when it exists, so nothing is overwritten. dst is then set to mode 0o600, as on Linux, and removed again
 // if that fails.
 func Clone(src, dst string) error {
-	// Open refuses a symlinked src; CLONE_NOFOLLOW keeps the clone from following one swapped in afterwards.
-	in, err := Open(src)
+	// OpenRegular refuses a symlinked or non-regular src; CLONE_NOFOLLOW keeps the clone from following one swapped in afterwards.
+	in, err := OpenRegular(src)
 	if err != nil {
 		return err
 	}

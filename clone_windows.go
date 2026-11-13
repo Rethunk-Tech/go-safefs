@@ -16,7 +16,7 @@ const fsctlDuplicateExtentsToFile = 0x98344
 // Clone copies src to a new dst with FSCTL_DUPLICATE_EXTENTS_TO_FILE, sharing extents on a volume that supports it
 // (ReFS). dst is created exclusively with mode 0o600 and removed again on failure.
 func Clone(src, dst string) error {
-	in, err := Open(src)
+	in, err := OpenRegular(src)
 	if err != nil {
 		return err
 	}

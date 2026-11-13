@@ -11,7 +11,7 @@ import (
 // Clone copies src to a new dst with FICLONE, sharing extents on a filesystem that supports it. dst is created
 // exclusively with mode 0o600 and removed again on failure.
 func Clone(src, dst string) error {
-	in, err := Open(src)
+	in, err := OpenRegular(src)
 	if err != nil {
 		return err
 	}

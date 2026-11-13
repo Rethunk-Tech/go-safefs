@@ -5,6 +5,7 @@ package safefs
 import (
 	"crypto/sha256"
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -63,5 +64,29 @@ func TestCopyFileAndHashFileRefuseAFifo(t *testing.T) {
 		case <-timer.C:
 			t.Fatal("blocked on a FIFO")
 		}
+	}
+}
+
+func TestCloneRefusesAFifo(t *testing.T) {
+	dir := t.TempDir()
+	pipe := filepath.Join(dir, "pipe")
+	if err := syscall.Mkfifo(pipe, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		// Releases an open that did block, so the goroutine does not outlive the test.
+		if w, err := os.OpenFile(pipe, os.O_WRONLY|syscall.O_NONBLOCK, 0); err == nil {
+			_ = w.Close()
+		}
+	})
+	done := make(chan error, 1)
+	go func() { done <- Clone(pipe, filepath.Join(dir, "out")) }()
+	select {
+	case err := <-done:
+		if !errors.Is(err, ErrNotRegular) {
+			t.Errorf("err = %v, want ErrNotRegular", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Clone blocked on a FIFO")
 	}
 }
