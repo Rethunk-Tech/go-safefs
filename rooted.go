@@ -65,7 +65,7 @@ var ErrNotRegular = errors.New("not a regular file")
 
 // OpenRegular opens path for reading, refusing anything but a regular file.
 func OpenRegular(path string) (*os.File, error) {
-	info, err := os.Lstat(path) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
+	info, err := os.Stat(path) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 	if err != nil {
 		return nil, err
 	}
