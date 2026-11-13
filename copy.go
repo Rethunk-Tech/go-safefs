@@ -79,10 +79,7 @@ func CopyTree(src, dst string, opts CopyOptions) (skipped []string, err error) {
 		}
 	}
 	var batch syncBatch
-	if err = os.MkdirAll(dst, 0o750); err == nil { //nolint:gosec // G703: the caller names the path; taking one is this package's contract
-		err = batch.begin(dst)
-	}
-	if err != nil {
+	if err = beginCopy(dst, &batch); err != nil {
 		return nil, err
 	}
 	passes := 1
@@ -96,6 +93,14 @@ func CopyTree(src, dst string, opts CopyOptions) (skipped []string, err error) {
 		err = batch.finish(dst)
 	}
 	return skipped, err
+}
+
+// beginCopy creates dst and starts the batch that flushes the copy into it.
+func beginCopy(dst string, batch *syncBatch) error {
+	if err := os.MkdirAll(dst, 0o750); err != nil { //nolint:gosec // G703: the caller names the path; taking one is this package's contract
+		return err
+	}
+	return batch.begin(dst)
 }
 
 // LinkedDir reports an entry that leads to a directory without being one: a symlink to a folder, or on Windows a
@@ -368,10 +373,7 @@ func CopyTreeFollowingLinks(src, dst string, opts CopyOptions) (skipped []string
 		return nil, err
 	}
 	var batch syncBatch
-	if err = os.MkdirAll(dst, 0o750); err == nil {
-		err = batch.begin(dst)
-	}
-	if err != nil {
+	if err = beginCopy(dst, &batch); err != nil {
 		return nil, err
 	}
 	err = fs.WalkDir(r.FS(), ".", func(rel string, d fs.DirEntry, err error) error {
@@ -379,7 +381,7 @@ func CopyTreeFollowingLinks(src, dst string, opts CopyOptions) (skipped []string
 			return err
 		}
 		if rel == "." {
-			return os.MkdirAll(dst, 0o750)
+			return nil // beginCopy made it
 		}
 		info, err := d.Info()
 		if err != nil {

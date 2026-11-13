@@ -119,15 +119,22 @@ func TestTreeCopiesDoNotBlockOnAPipeSwappedIn(t *testing.T) {
 		"CopyTree":               func(dst string) error { _, err := CopyTree(src, dst, CopyOptions{}); return err },
 		"CopyTreeFollowingLinks": func(dst string) error { _, err := CopyTreeFollowingLinks(src, dst, CopyOptions{}); return err },
 	} {
+		var copied, refused int
 		for deadline := time.Now().Add(time.Second); time.Now().Before(deadline); {
 			done := make(chan error, 1)
 			dst := t.TempDir()
 			go func() { done <- run(dst) }()
 			select {
-			case <-done:
+			case err := <-done:
+				if err == nil {
+					copied++
+				} else {
+					refused++
+				}
 			case <-time.After(2 * time.Second):
 				t.Fatalf("%s blocked on a pipe", name)
 			}
 		}
+		t.Logf("%s: %d copies, %d refusals", name, copied, refused)
 	}
 }
