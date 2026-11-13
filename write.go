@@ -72,5 +72,5 @@ func writeStream(path string, perm os.FileMode, durable bool, write func(io.Writ
 // narrows it exactly as os.WriteFile would; os.CreateTemp plus Chmod would set the bits verbatim. The name carries
 // 130 random bits, so O_EXCL failing means something is wrong rather than a collision to retry.
 func createTemp(path string, perm os.FileMode) (*os.File, error) {
-	return os.OpenFile(path+"."+rand.Text()+".tmp", os.O_RDWR|os.O_CREATE|os.O_EXCL, perm)
+	return os.OpenFile(path+"."+rand.Text()+".tmp", os.O_RDWR|os.O_CREATE|os.O_EXCL, perm) //nolint:gosec // G304: the caller names the path; taking one is this package's contract
 }
