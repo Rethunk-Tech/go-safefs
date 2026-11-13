@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 // CopyProgress counts files and bytes while CopyTree runs.
@@ -111,9 +112,10 @@ func LinkedDir(p string, info os.FileInfo) bool {
 }
 
 // openIn opens the file rel (a slash path) below r, refusing a link that leads out of it. A Windows runner has
-// answered not-exist for a file that is there, so that one answer is checked against the plain path.
+// answered not-exist for a file that is there, so that one answer is checked against the plain path. O_NONBLOCK keeps
+// a pipe swapped in after the walk's check from blocking the open; the caller checks the handle's type.
 func openIn(r *os.Root, src, rel string) (*os.File, error) {
-	f, err := r.Open(rel)
+	f, err := r.OpenFile(rel, os.O_RDONLY|syscall.O_NONBLOCK, 0)
 	if errors.Is(err, fs.ErrNotExist) {
 		if p := filepath.Join(src, filepath.FromSlash(rel)); pathExists(p) {
 			return openUnder(src, p)
@@ -125,7 +127,7 @@ func openIn(r *os.Root, src, rel string) (*os.File, error) {
 // openUnder opens p by path, which the root cannot confine, and then checks that what was opened still lies under
 // src: a folder swapped for a link between the existence check and the open is refused instead of read.
 func openUnder(src, p string) (*os.File, error) {
-	f, err := Open(p)
+	f, err := OpenRegular(p)
 	if err != nil {
 		return nil, err
 	}
@@ -297,6 +299,9 @@ func copyFrom(in *os.File, dst string, opts CopyOptions, batch *syncBatch) (err 
 	if err != nil {
 		return err
 	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("%s: %w", in.Name(), ErrNotRegular)
+	}
 	tmp := dst + opts.tempSuffix()
 	_ = Remove(tmp)
 	// The copy keeps the source's exec and read bits but never grants write to group or others. The owner always
@@ -417,14 +422,10 @@ func copyFollowing(r *os.Root, src, rel, p, target string, info fs.FileInfo, opt
 		} else if err != nil {
 			return err
 		}
-		if info, err = os.Stat(from); err != nil { //nolint:gosec // G703: the caller names the path; taking one is this package's contract
-			return err
-		}
-		if !info.Mode().IsRegular() {
+		in, err := OpenRegular(from)
+		if errors.Is(err, ErrNotRegular) {
 			return fmt.Errorf("%s is not a regular file", p)
-		}
-		in, err := Open(from)
-		if err != nil {
+		} else if err != nil {
 			return err
 		}
 		defer func() { _ = in.Close() }()

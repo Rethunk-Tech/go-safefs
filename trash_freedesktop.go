@@ -142,11 +142,15 @@ func copyAll(from, to string) error {
 		case !info.Mode().IsRegular():
 			return nil // a socket or pipe has nothing to keep, and reading one could block
 		}
-		in, err := src.Open(rel)
+		// O_NONBLOCK: a pipe swapped in after the check above must not block the open.
+		in, err := src.OpenFile(rel, os.O_RDONLY|syscall.O_NONBLOCK, 0)
 		if err != nil {
 			return err
 		}
 		defer func() { _ = in.Close() }()
+		if st, err := in.Stat(); err != nil || !st.Mode().IsRegular() {
+			return err
+		}
 		out, err := dst.OpenFile(rel, os.O_WRONLY|os.O_CREATE|os.O_EXCL, info.Mode().Perm())
 		if err != nil {
 			return err

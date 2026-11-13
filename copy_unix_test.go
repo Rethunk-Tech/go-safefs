@@ -90,3 +90,44 @@ func TestCloneRefusesAFifo(t *testing.T) {
 		t.Fatal("Clone blocked on a FIFO")
 	}
 }
+
+// A file swapped for a pipe between the walk's check and the open must be refused, not block the copy.
+func TestTreeCopiesDoNotBlockOnAPipeSwappedIn(t *testing.T) {
+	src, spare := t.TempDir(), t.TempDir()
+	name := filepath.Join(src, "f")
+	stop := make(chan struct{})
+	swapped := make(chan struct{})
+	go func() {
+		defer close(swapped)
+		for i := 0; ; i++ {
+			select {
+			case <-stop:
+				return
+			default:
+			}
+			tmp := filepath.Join(spare, "x")
+			if i%2 == 0 {
+				_ = os.WriteFile(tmp, []byte("data"), 0o600)
+			} else {
+				_ = syscall.Mkfifo(tmp, 0o600)
+			}
+			_ = os.Rename(tmp, name)
+		}
+	}()
+	defer func() { close(stop); <-swapped }()
+	for name, run := range map[string]func(dst string) error{
+		"CopyTree":               func(dst string) error { _, err := CopyTree(src, dst, CopyOptions{}); return err },
+		"CopyTreeFollowingLinks": func(dst string) error { _, err := CopyTreeFollowingLinks(src, dst, CopyOptions{}); return err },
+	} {
+		for deadline := time.Now().Add(time.Second); time.Now().Before(deadline); {
+			done := make(chan error, 1)
+			dst := t.TempDir()
+			go func() { done <- run(dst) }()
+			select {
+			case <-done:
+			case <-time.After(2 * time.Second):
+				t.Fatalf("%s blocked on a pipe", name)
+			}
+		}
+	}
+}
