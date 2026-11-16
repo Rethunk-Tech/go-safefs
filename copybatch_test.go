@@ -125,16 +125,16 @@ func TestCopyTreeSkipsASourceEntryNamedCopyMarker(t *testing.T) {
 
 func TestCopyTreeToASymlinkedDirWithSyncOn(t *testing.T) {
 	withSyncWrites(t)
-	src, real := t.TempDir(), t.TempDir()
+	src, dir := t.TempDir(), t.TempDir()
 	writeFile(t, src, "a", "a")
 	link := filepath.Join(t.TempDir(), "out")
-	if err := os.Symlink(real, link); err != nil {
+	if err := os.Symlink(dir, link); err != nil {
 		t.Skipf("no symlinks here: %v", err)
 	}
 	if _, err := CopyTree(src, link, CopyOptions{}); err != nil {
 		t.Fatalf("CopyTree through a symlinked dst = %v, want nil", err)
 	}
-	got, err := os.ReadFile(filepath.Join(real, "a"))
+	got, err := os.ReadFile(filepath.Join(dir, "a"))
 	if err != nil || string(got) != "a" {
 		t.Fatalf("a = %q, %v", got, err)
 	}
