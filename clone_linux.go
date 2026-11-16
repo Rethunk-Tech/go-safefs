@@ -9,14 +9,18 @@ import (
 )
 
 // Clone copies src to a new dst with FICLONE, sharing extents on a filesystem that supports it. dst is created
-// exclusively with mode 0o600 and removed again on failure.
+// exclusively with src's read and exec bits, as the copy tier does, and removed again on failure.
 func Clone(src, dst string) error {
 	in, err := OpenRegular(src)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = in.Close() }()
-	out, err := CreateExcl(dst, 0o600)
+	info, err := in.Stat()
+	if err != nil {
+		return err
+	}
+	out, err := CreateExcl(dst, info.Mode().Perm()&0o755|0o200)
 	if err != nil {
 		return err
 	}

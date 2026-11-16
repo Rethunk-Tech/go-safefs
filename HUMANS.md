@@ -65,7 +65,7 @@ default.
 | `OpenRegular` | As `Open`, and fails with `ErrNotRegular` for a directory, device or pipe. |
 | `IsFile`, `IsDir` | Follow a final symlink anywhere (`os.Stat`), unlike the calls above. |
 | `ReadCapped`, `CapReader` | Hold at most `limit` bytes plus one probe byte; more input fails with `ErrTooLarge`. |
-| `Rename`, `Remove`, `RemoveAll` | On Windows retry access-denied, sharing and lock violations for up to 2 s; elsewhere they are the `os` calls. |
+| `Rename`, `Remove`, `RemoveAll` | On Windows retry access-denied, sharing and lock violations for up to 2 s; on Unix `RemoveAll` first refuses with `ErrMountInside` a tree with a mount point below it, and the rest are the `os` calls. |
 | `WriteFileAtomic`, `WriteStreamAtomic` | Temp file `<base>.<random>.tmp` beside the path, fsync, rename. On failure the temp is removed and the path is untouched. The temp name is a contract. |
 | `WriteStreamNoSync` | The same without fsync; a crash may leave the file torn, so read it as absent. Every atomic writer skips its fsyncs under `go test`. |
 | `CopyFile` | Writes `dst+TempSuffix`, fsyncs, renames over `dst`, first removing a stale temp. Keeps the source's read and exec bits, never grants group or other write, always keeps owner write. |
