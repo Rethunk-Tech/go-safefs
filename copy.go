@@ -46,7 +46,7 @@ func (o CopyOptions) tempSuffix() string {
 // still renamed into place whole, but none is fsynced on its own: the copy is flushed once at the end (syncfs on
 // Linux, else each written file and folder once), which is what makes a thousand small files cost one flush. Until
 // then dst holds CopyMarker, so a crash is told from a finished copy by CopyInterrupted(dst); the same call again
-// replaces every file and clears it. Put's own writes are flushed by that final syncfs on Linux only. Directory
+// replaces every file and clears it. Put's own writes are flushed by that final syncfs on Linux only.
 // Directory junctions, mount points and symlink directories are not followed, and are returned in skipped; so is a
 // top-level entry named CopyMarker, which the copy's own marker owns. Symlink files are copied by content when they
 // still resolve under src, and are an error when they escape.
