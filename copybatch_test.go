@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"testing"
 )
 
@@ -93,6 +94,49 @@ func TestCopyTreeFollowingLinksKeepsTheMarkerUntilDone(t *testing.T) {
 	}
 	if CopyInterrupted(dst) {
 		t.Fatal("marker survived")
+	}
+}
+
+func TestCopyTreeSkipsASourceEntryNamedCopyMarker(t *testing.T) {
+	for name, copyTree := range map[string]func(string, string) ([]string, error){
+		"CopyTree":               func(s, d string) ([]string, error) { return CopyTree(s, d, CopyOptions{}) },
+		"CopyTreeFollowingLinks": func(s, d string) ([]string, error) { return CopyTreeFollowingLinks(s, d, CopyOptions{}) },
+	} {
+		t.Run(name, func(t *testing.T) {
+			src, dst := t.TempDir(), filepath.Join(t.TempDir(), "out")
+			writeFile(t, src, "x", "x")
+			want := writeFile(t, src, CopyMarker, "not a marker")
+			skipped, err := copyTree(src, dst)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !slices.Contains(skipped, want) {
+				t.Fatalf("skipped = %v, want %s", skipped, want)
+			}
+			if CopyInterrupted(dst) {
+				t.Fatal("marker survived a finished copy")
+			}
+			if _, err := os.Stat(filepath.Join(dst, CopyMarker)); err == nil {
+				t.Fatal("the source's CopyMarker was copied and then deleted")
+			}
+		})
+	}
+}
+
+func TestCopyTreeToASymlinkedDirWithSyncOn(t *testing.T) {
+	withSyncWrites(t)
+	src, real := t.TempDir(), t.TempDir()
+	writeFile(t, src, "a", "a")
+	link := filepath.Join(t.TempDir(), "out")
+	if err := os.Symlink(real, link); err != nil {
+		t.Skipf("no symlinks here: %v", err)
+	}
+	if _, err := CopyTree(src, link, CopyOptions{}); err != nil {
+		t.Fatalf("CopyTree through a symlinked dst = %v, want nil", err)
+	}
+	got, err := os.ReadFile(filepath.Join(real, "a"))
+	if err != nil || string(got) != "a" {
+		t.Fatalf("a = %q, %v", got, err)
 	}
 }
 

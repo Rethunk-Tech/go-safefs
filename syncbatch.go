@@ -8,7 +8,8 @@ import (
 
 // CopyMarker is the name of the file CopyTree and CopyTreeFollowingLinks keep in dst while a copy is unfinished.
 // It is created and flushed before the first file is written and removed only after the whole copy is durable, so a
-// crash or an error leaves it behind. Callers that sweep dst by name must leave it alone.
+// crash or an error leaves it behind. Callers that sweep dst by name must leave it alone, and a source entry of
+// that name is not copied, since the copy's own marker owns it.
 const CopyMarker = ".safefs-copy-incomplete"
 
 // CopyInterrupted reports whether dst holds an unfinished tree copy: its files may be missing, short or hold
@@ -38,10 +39,16 @@ func (b *syncBatch) begin(dst string) error {
 	return nil
 }
 
-// finish makes every written file durable, then removes the marker and flushes its removal.
+// finish makes every written file durable, then removes the marker and flushes its removal. dst itself may be a
+// symlink to a directory, which SyncDir refuses to open, so it is resolved before the flush and the final sync.
 func (b *syncBatch) finish(dst string) error {
+	dir := dst
 	if syncWrites {
-		if err := b.flush(dst); err != nil {
+		var err error
+		if dir, err = EvalSymlinks(dst); err != nil {
+			return err
+		}
+		if err := b.flush(dir); err != nil {
 			return err
 		}
 	}
@@ -49,7 +56,7 @@ func (b *syncBatch) finish(dst string) error {
 		return err
 	}
 	if syncWrites {
-		return SyncDir(dst)
+		return SyncDir(dir)
 	}
 	return nil
 }

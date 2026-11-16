@@ -47,8 +47,9 @@ func (o CopyOptions) tempSuffix() string {
 // Linux, else each written file and folder once), which is what makes a thousand small files cost one flush. Until
 // then dst holds CopyMarker, so a crash is told from a finished copy by CopyInterrupted(dst); the same call again
 // replaces every file and clears it. Put's own writes are flushed by that final syncfs on Linux only. Directory
-// junctions, mount points and symlink directories are not followed, and are returned in skipped. Symlink files are
-// copied by content when they still resolve under src, and are an error when they escape.
+// Directory junctions, mount points and symlink directories are not followed, and are returned in skipped; so is a
+// top-level entry named CopyMarker, which the copy's own marker owns. Symlink files are copied by content when they
+// still resolve under src, and are an error when they escape.
 func CopyTree(src, dst string, opts CopyOptions) (skipped []string, err error) {
 	r, err := os.OpenRoot(src)
 	if err != nil {
@@ -170,6 +171,14 @@ func walkCopy(r *os.Root, src, dst string, opts CopyOptions, pass int, progress 
 		}
 		if rel == "." {
 			return os.MkdirAll(dst, 0o750) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
+		}
+		if rel == CopyMarker {
+			// dst's own marker owns that name; copying the source's entry would be undone by finish's removal.
+			*skipped = append(*skipped, filepath.Join(src, CopyMarker))
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
 		}
 		if opts.First != "" && (strings.SplitN(rel, "/", 2)[0] == opts.First) != (pass == 0) {
 			if d.IsDir() {
@@ -372,6 +381,14 @@ func CopyTreeFollowingLinks(src, dst string, opts CopyOptions) (skipped []string
 		}
 		if rel == "." {
 			return nil // beginCopy made it
+		}
+		if rel == CopyMarker {
+			// dst's own marker owns that name; copying the source's entry would be undone by finish's removal.
+			skipped = append(skipped, filepath.Join(src, CopyMarker))
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
 		}
 		info, err := d.Info()
 		if err != nil {
