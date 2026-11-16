@@ -29,11 +29,20 @@ func mountedDir(src, p string) bool {
 	if p == src {
 		return false
 	}
-	mounts, err := mountsBelow(src)
+	// The mount table names resolved paths, while p is built from the caller's src, so a src that is itself a link
+	// has to be resolved before the two can be compared.
+	resolved, err := EvalSymlinks(src)
+	if err != nil {
+		resolved = src
+	}
+	mounts, err := mountsBelow(resolved)
 	if err == nil {
 		abs, aerr := filepath.Abs(p)
 		if aerr != nil {
 			return false
+		}
+		if rel, rerr := filepath.Rel(src, p); rerr == nil && filepath.IsLocal(rel) {
+			abs = filepath.Join(resolved, rel)
 		}
 		return slices.Contains(mounts, abs)
 	}
