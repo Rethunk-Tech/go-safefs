@@ -5,12 +5,9 @@ package diskcache
 import (
 	"encoding/json"
 	"errors"
-	"io"
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/Rethunk-Tech/go-safefs"
 )
 
 // Entry is one cached answer. The JSON keys are a format contract: other tools read "fetched" to expire files.
@@ -56,7 +53,7 @@ func read[T any](c *Cache, name string) (Entry[T], bool) {
 	if path == "" {
 		return Entry[T]{}, false
 	}
-	b, err := safefs.ReadFile(path)
+	b, err := readEntry(c.Dir, name)
 	if err != nil {
 		return Entry[T]{}, false
 	}
@@ -88,21 +85,7 @@ func write[T any](c *Cache, name string, e Entry[T]) {
 	if err != nil || os.MkdirAll(c.Dir, 0o700) != nil {
 		return
 	}
-	root, err := os.OpenRoot(c.Dir)
-	if err != nil {
-		return
-	}
-	defer func() { _ = root.Close() }()
-	// Nested dirs go through this root so a symlink already in Dir cannot redirect a nested name out of it.
-	if dir := filepath.ToSlash(filepath.Dir(filepath.FromSlash(name))); dir != "." {
-		if err := root.MkdirAll(dir, 0o700); err != nil {
-			return
-		}
-	}
-	_ = safefs.WriteStreamNoSync(path, 0o600, func(w io.Writer) error {
-		_, err := w.Write(b)
-		return err
-	})
+	_ = replaceEntry(c.Dir, name, b)
 }
 
 // Cached returns the entry at name while it is younger than ttl, else fetches; a failed fetch falls back to a stale
