@@ -50,17 +50,17 @@ func TestPutDoesNotWriteThroughADestSymlink(t *testing.T) {
 		t.Fatalf("Put wrote through a dest symlink: %q", got)
 	}
 
-	real := filepath.Join(c.Dir, "real")
-	if err := os.Mkdir(real, 0o700); err != nil {
+	inside := filepath.Join(c.Dir, "inside")
+	if err := os.Mkdir(inside, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink("real", filepath.Join(c.Dir, "sub")); err != nil {
+	if err := os.Symlink("inside", filepath.Join(c.Dir, "sub")); err != nil {
 		t.Fatal(err)
 	}
 	if err := diskcache.Put(c, "sub/k", 1); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(real, "k")); err == nil {
+	if _, err := os.Stat(filepath.Join(inside, "k")); err == nil {
 		t.Fatal("Put wrote through a dest dir symlink")
 	}
 }
