@@ -73,12 +73,13 @@ func FuzzSamePath(f *testing.F) {
 
 func FuzzExtendedPath(f *testing.F) {
 	long := `C:\Users\u\AppData\Local\App\blobs\` + strings.Repeat("a", 64) + `\` + strings.Repeat(`d\`, 80) + "f.dll"
-	for _, s := range []string{`C:\short\path`, `\\server\share\` + strings.Repeat("x", 300), `\\?\C:\` + strings.Repeat("x", 300), long, "", `C:\`, strings.Repeat("a", 248)} {
+	for _, s := range []string{`C:\short\path`, `\\server\share\` + strings.Repeat("x", 300), `\\?\C:\` + strings.Repeat("x", 300), long, "", `C:\`, strings.Repeat("a", 248), `UNC\` + strings.Repeat("x", 244)} {
 		f.Add(s)
 	}
 	f.Fuzz(func(t *testing.T, abs string) {
 		got := ExtendedPath(abs)
-		if strings.HasPrefix(abs, `\\`) || len(abs) < 248 {
+		drive := len(abs) >= 3 && abs[1] == ':' && (abs[2] == '\\' || abs[2] == '/')
+		if strings.HasPrefix(abs, `\\`) || len(abs) < 248 || !drive {
 			if got != abs {
 				t.Fatalf("ExtendedPath(%q) = %q, want unchanged", abs, got)
 			}

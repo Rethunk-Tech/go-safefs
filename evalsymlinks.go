@@ -9,6 +9,9 @@ func ExtendedPath(abs string) string {
 	if len(abs) < 248 || strings.HasPrefix(abs, `\\`) {
 		return abs
 	}
+	if abs[1] != ':' || (abs[2] != '\\' && abs[2] != '/') {
+		return abs
+	}
 	return `\\?\` + abs
 }
 
