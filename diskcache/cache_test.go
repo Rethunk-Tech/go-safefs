@@ -207,3 +207,20 @@ func TestANameOutsideDirNeverReachesAFile(t *testing.T) {
 		t.Fatalf("a write escaped the cache: %v %v", entries, err)
 	}
 }
+
+func TestPutDoesNotWriteThroughADirSymlink(t *testing.T) {
+	parent := t.TempDir()
+	dir := filepath.Join(parent, "cache")
+	if err := os.Mkdir(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	outside := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(dir, "sub")); err != nil {
+		t.Skip(err)
+	}
+	c := &diskcache.Cache{Dir: dir}
+	_ = diskcache.Put(c, "sub/k", 1)
+	if _, err := os.Stat(filepath.Join(outside, "k")); err == nil {
+		t.Fatal("Put wrote through a dest dir symlink")
+	}
+}

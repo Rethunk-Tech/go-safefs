@@ -85,8 +85,19 @@ func write[T any](c *Cache, name string, e Entry[T]) {
 		return
 	}
 	b, err := json.Marshal(e)
-	if err != nil || os.MkdirAll(filepath.Dir(path), 0o700) != nil {
+	if err != nil || os.MkdirAll(c.Dir, 0o700) != nil {
 		return
+	}
+	root, err := os.OpenRoot(c.Dir)
+	if err != nil {
+		return
+	}
+	defer func() { _ = root.Close() }()
+	// Nested dirs go through this root so a symlink already in Dir cannot redirect a nested name out of it.
+	if dir := filepath.ToSlash(filepath.Dir(filepath.FromSlash(name))); dir != "." {
+		if err := root.MkdirAll(dir, 0o700); err != nil {
+			return
+		}
 	}
 	_ = safefs.WriteStreamNoSync(path, 0o600, func(w io.Writer) error {
 		_, err := w.Write(b)
