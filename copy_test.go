@@ -81,6 +81,28 @@ func TestCopyTreeSkipsASymlinkDirectory(t *testing.T) {
 	}
 }
 
+func TestCopyTreeDoesNotWriteThroughADestDirSymlink(t *testing.T) {
+	for name, copyTree := range map[string]func(string, string) ([]string, error){
+		"CopyTree":               func(s, d string) ([]string, error) { return CopyTree(s, d, CopyOptions{}) },
+		"CopyTreeFollowingLinks": func(s, d string) ([]string, error) { return CopyTreeFollowingLinks(s, d, CopyOptions{}) },
+	} {
+		t.Run(name, func(t *testing.T) {
+			src, dst, outside := t.TempDir(), t.TempDir(), t.TempDir()
+			writeFile(t, src, "sub/secret.txt", "pwn")
+			if err := os.Symlink(outside, filepath.Join(dst, "sub")); err != nil {
+				t.Skip(err)
+			}
+			_, err := copyTree(src, dst)
+			if _, statErr := os.Stat(filepath.Join(outside, "secret.txt")); statErr == nil {
+				t.Fatal("wrote through a dest dir symlink")
+			}
+			if err == nil {
+				t.Fatal("copied through a dest dir symlink without error")
+			}
+		})
+	}
+}
+
 func TestRealDirUnderARootReachedThroughALink(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
