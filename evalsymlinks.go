@@ -12,7 +12,7 @@ func ExtendedPath(abs string) string {
 	if abs[1] != ':' || (abs[2] != '\\' && abs[2] != '/') {
 		return abs
 	}
-	return `\\?\` + abs
+	return `\\?\` + strings.ReplaceAll(abs, "/", `\`)
 }
 
 // trimExtended turns an EvalSymlinks result of an extended-length path back into the classic form: \\?\C:\x

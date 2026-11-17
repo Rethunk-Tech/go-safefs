@@ -9,14 +9,20 @@ import (
 
 func TestExtendedPathOnlyPrefixesLongDrivePaths(t *testing.T) {
 	long := `C:\Users\u\AppData\Local\App\blobs\` + strings.Repeat("a", 64) + `\` + strings.Repeat(`d\`, 80) + "f.dll"
+	mixed := `C:/Users/u/AppData\Local/App/blobs/` + strings.Repeat("a", 64) + `\` + strings.Repeat(`d/`, 80) + "f.dll"
 	for _, tc := range []struct{ in, want string }{
 		{`C:\short\path`, `C:\short\path`},
 		{`\\server\share\` + strings.Repeat("x", 300), `\\server\share\` + strings.Repeat("x", 300)},
 		{`\\?\C:\` + strings.Repeat("x", 300), `\\?\C:\` + strings.Repeat("x", 300)},
 		{long, `\\?\` + long},
+		{mixed, `\\?\` + strings.ReplaceAll(mixed, "/", `\`)},
 	} {
-		if got := ExtendedPath(tc.in); got != tc.want {
+		got := ExtendedPath(tc.in)
+		if got != tc.want {
 			t.Errorf("ExtendedPath(%.40q) = %.40q, want %.40q", tc.in, got, tc.want)
+		}
+		if strings.HasPrefix(got, `\\?\`) && strings.Contains(got, "/") {
+			t.Errorf("ExtendedPath result still has /: %.40q", got)
 		}
 	}
 }
@@ -85,10 +91,11 @@ func FuzzExtendedPath(f *testing.F) {
 			}
 			return
 		}
-		if got != `\\?\`+abs {
+		normalized := strings.ReplaceAll(abs, "/", `\`)
+		if got != `\\?\`+normalized {
 			t.Fatalf("ExtendedPath of a long drive path = %q", got)
 		}
-		if trimExtended(got) != abs {
+		if trimExtended(got) != normalized {
 			t.Fatalf("trimExtended(ExtendedPath(%q)) = %q", abs, trimExtended(got))
 		}
 	})
