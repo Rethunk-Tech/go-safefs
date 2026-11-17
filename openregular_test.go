@@ -54,7 +54,7 @@ func TestRootedCallsAcceptATrailingSeparator(t *testing.T) {
 
 func TestRootedCallsRefuseASymlinkedFinalElementLeadingOut(t *testing.T) {
 	t.Parallel()
-	skipWine(t, "Wine host symlinks are not Windows reparse points")
+	skipWineSymlinks(t)
 	outside := writeFile(t, t.TempDir(), "secret", "no")
 	dir := t.TempDir()
 	link := filepath.Join(dir, "link")
@@ -74,7 +74,7 @@ func TestRootedCallsRefuseASymlinkedFinalElementLeadingOut(t *testing.T) {
 }
 
 func TestWithinRootRefusesALinkedFolderOutTheRoot(t *testing.T) {
-	skipWine(t, "Wine host symlinks are not Windows reparse points")
+	skipWineSymlinks(t)
 	root, evil := t.TempDir(), t.TempDir()
 	if err := os.Symlink(evil, filepath.Join(root, "Foo")); err != nil {
 		t.Skip(err)

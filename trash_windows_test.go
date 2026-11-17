@@ -93,7 +93,9 @@ func TestHoldersOmitsThisProcessAndSkipsUnopenable(t *testing.T) {
 }
 
 func TestTrashNamesTheProgramThatHoldsAFileInTheFolder(t *testing.T) {
-	skipWine(t, "needs PowerShell and the Restart Manager service")
+	if underWine() {
+		t.Skip("needs PowerShell and the Restart Manager service")
+	}
 	dir := filepath.Join(t.TempDir(), "My Mod²")
 	file := filepath.Join(dir, "Plugin.dll")
 	if err := os.MkdirAll(dir, 0o750); err != nil {

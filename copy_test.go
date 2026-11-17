@@ -30,7 +30,7 @@ func TestCopyTreeCopiesSymlinkFilesThatStayInside(t *testing.T) {
 }
 
 func TestCopyTreeRejectsASymlinkFileThatEscapes(t *testing.T) {
-	skipWine(t, "Wine host symlinks are not Windows reparse points")
+	skipWineSymlinks(t)
 	src := t.TempDir()
 	outside := filepath.Join(t.TempDir(), "secret")
 	if err := WriteFile(outside, []byte("no"), 0o600); err != nil {

@@ -11,11 +11,11 @@ func underWine() bool {
 	return runtime.GOOS == "windows" && os.Getenv("WINEPREFIX") != ""
 }
 
-// skipWine skips tests that need a Windows kernel service or reparse-point semantics Wine does not provide.
-func skipWine(t *testing.T, reason string) {
+// skipWineSymlinks skips tests that need reparse points: Wine's host symlinks are not.
+func skipWineSymlinks(t *testing.T) {
 	t.Helper()
 	if underWine() {
-		t.Skip(reason)
+		t.Skip("Wine host symlinks are not Windows reparse points")
 	}
 }
 
