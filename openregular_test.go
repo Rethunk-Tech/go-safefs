@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -99,4 +100,42 @@ func TestWithinRootRefusesALinkedFolderOutTheRoot(t *testing.T) {
 	if _, err := WithinRoot(root, filepath.Join(root, "real", "sub", "f"), write); err != nil {
 		t.Fatalf("a path inside the root was refused: %v", err)
 	}
+}
+
+func FuzzWithinRoot(f *testing.F) {
+	for _, rel := range []string{"a", "a/b", "..", "../x", ".", "", "a/../b", "/abs", `a\b`, "real/sub/f"} {
+		f.Add(rel)
+	}
+	f.Fuzz(func(t *testing.T, rel string) {
+		if strings.IndexByte(rel, 0) >= 0 {
+			return
+		}
+		root := t.TempDir()
+		for _, path := range []string{filepath.Join(root, rel), rel} {
+			_, err := WithinRoot(root, path, func(r *os.Root, name string) (struct{}, error) {
+				if name != filepath.Base(name) || name == "." || name == ".." {
+					t.Fatalf("callback name %q is not a single element", name)
+				}
+				return struct{}{}, r.WriteFile(name, []byte("x"), 0o600)
+			})
+			wantRel, rerr := filepath.Rel(filepath.Clean(root), filepath.Clean(path))
+			inside := rerr == nil && wantRel != "." && filepath.IsLocal(wantRel)
+			if errors.Is(err, ErrOutsideRoot) {
+				if inside {
+					t.Fatalf("WithinRoot(%q) refused a local path", path)
+				}
+				continue
+			}
+			if err != nil {
+				continue
+			}
+			if !inside {
+				t.Fatalf("WithinRoot(%q) accepted a path not below %q", path, root)
+			}
+			written := filepath.Join(root, wantRel)
+			if !UnderRoot(root, written) {
+				t.Fatalf("WithinRoot wrote %q outside %q", written, root)
+			}
+		}
+	})
 }

@@ -119,6 +119,35 @@ func TestUnderRoot(t *testing.T) {
 	}
 }
 
+func FuzzUnderRoot(f *testing.F) {
+	for _, pair := range [][2]string{
+		{"/", "/etc"},
+		{"/data", "/data"},
+		{"/data", "/data-other"},
+		{"/data", "/data/../etc"},
+		{"/data", "/data/a/../b"},
+		{"/data", "/etc"},
+		{"", "a"},
+		{".", ".."},
+	} {
+		f.Add(pair[0], pair[1])
+	}
+	f.Fuzz(func(t *testing.T, root, p string) {
+		in := UnderRoot(root, p)
+		rel, err := filepath.Rel(filepath.Clean(root), filepath.Clean(p))
+		local := err == nil && filepath.IsLocal(rel)
+		if in != local {
+			t.Fatalf("UnderRoot(%q, %q) = %v, Rel local = %v (%q, %v)", root, p, in, local, rel, err)
+		}
+		if filepath.IsLocal(p) {
+			joined := filepath.Join(root, p)
+			if !UnderRoot(root, joined) {
+				t.Fatalf("UnderRoot(%q, Join(%q)) is false", root, p)
+			}
+		}
+	})
+}
+
 func TestCopyTreeReportsSkippedLinkedFolders(t *testing.T) {
 	src, outside := t.TempDir(), t.TempDir()
 	if err := os.Symlink(outside, filepath.Join(src, "link")); err != nil {
