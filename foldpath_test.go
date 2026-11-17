@@ -76,6 +76,7 @@ func TestResolveFoldBudget(t *testing.T) {
 
 func TestResolveFoldRootRefusesALinkOut(t *testing.T) {
 	t.Parallel()
+	skipWine(t, "Wine host symlinks are not Windows reparse points")
 	outside, inside := t.TempDir(), t.TempDir()
 	if err := os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("x"), 0o600); err != nil {
 		t.Fatal(err)

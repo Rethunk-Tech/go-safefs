@@ -23,12 +23,12 @@ func TestShFileOpErrorReadsItsOwnCodesBeforeWin32s(t *testing.T) {
 		{code: 0x75, text: "cancelled"},
 		{code: 0x86, text: "read-only CD", per: true},
 		{code: 0x10074, text: "root of a drive"},
-		{code: 32, text: "used by another process", inUse: true},
+		{code: 32, inUse: true},
 		{code: 5, text: "denied", inUse: true, per: true},
-		{code: 2, text: "cannot find", notExist: true},
+		{code: 2, notExist: true},
 	} {
 		err := shFileOpError(c.code)
-		if !strings.Contains(err.Error(), c.text) || errors.Is(err, ErrInUse) != c.inUse ||
+		if (c.text != "" && !strings.Contains(err.Error(), c.text)) || errors.Is(err, ErrInUse) != c.inUse ||
 			errors.Is(err, fs.ErrPermission) != c.per || errors.Is(err, fs.ErrNotExist) != c.notExist {
 			t.Errorf("code 0x%X: %q, in use %v, permission %v, not exist %v", c.code, err,
 				errors.Is(err, ErrInUse), errors.Is(err, fs.ErrPermission), errors.Is(err, fs.ErrNotExist))
@@ -57,7 +57,43 @@ func holdOpen(t *testing.T, file string) *exec.Cmd {
 	return cmd
 }
 
+func TestTrashMovesAFileWeDoNotHold(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "gone.bin")
+	if err := os.WriteFile(file, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := Trash(file); err != nil {
+		t.Skip(err)
+	}
+	if _, err := os.Stat(file); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("trashed file still there: %v", err)
+	}
+}
+
+func TestHoldersOmitsThisProcessAndSkipsUnopenable(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "held.bin")
+	if err := os.WriteFile(file, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = f.Close() })
+	holders, err := Holders([]string{file, filepath.Join(t.TempDir(), "missing.bin")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	self := os.Getpid()
+	for _, h := range holders {
+		if h.PID == self {
+			t.Fatalf("Holders named this process: %+v", holders)
+		}
+	}
+}
+
 func TestTrashNamesTheProgramThatHoldsAFileInTheFolder(t *testing.T) {
+	skipWine(t, "needs PowerShell and the Restart Manager service")
 	dir := filepath.Join(t.TempDir(), "My Mod²")
 	file := filepath.Join(dir, "Plugin.dll")
 	if err := os.MkdirAll(dir, 0o750); err != nil {

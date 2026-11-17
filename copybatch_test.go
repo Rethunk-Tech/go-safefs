@@ -131,6 +131,7 @@ func TestCopyTreeToASymlinkedDirWithSyncOn(t *testing.T) {
 	if err := os.Symlink(dir, link); err != nil {
 		t.Skipf("no symlinks here: %v", err)
 	}
+	removeBeforeTempCleanup(t, link)
 	if _, err := CopyTree(src, link, CopyOptions{}); err != nil {
 		t.Fatalf("CopyTree through a symlinked dst = %v, want nil", err)
 	}

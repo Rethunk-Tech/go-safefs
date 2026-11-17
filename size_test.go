@@ -60,6 +60,7 @@ func TestSizeFollowsALinkedFolder(t *testing.T) {
 	if err := os.Symlink(target, link); err != nil {
 		t.Skip(err)
 	}
+	removeBeforeTempCleanup(t, link)
 	for name, size := range map[string]func(string) (int64, error){"Size": Size, "SizeEachName": SizeEachName} {
 		if got, err := size(link); err != nil || got != 5 {
 			t.Errorf("%s(link) = %d, %v; want 5", name, got, err)

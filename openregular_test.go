@@ -33,6 +33,7 @@ func TestIsDirFollowsASymlinkOutOfItsFolder(t *testing.T) {
 	if err := os.Symlink(target, link); err != nil {
 		t.Skip(err)
 	}
+	removeBeforeTempCleanup(t, link)
 	if !IsDir(link) {
 		t.Fatal("symlinked folder not seen as a directory")
 	}
@@ -53,6 +54,7 @@ func TestRootedCallsAcceptATrailingSeparator(t *testing.T) {
 
 func TestRootedCallsRefuseASymlinkedFinalElementLeadingOut(t *testing.T) {
 	t.Parallel()
+	skipWine(t, "Wine host symlinks are not Windows reparse points")
 	outside := writeFile(t, t.TempDir(), "secret", "no")
 	dir := t.TempDir()
 	link := filepath.Join(dir, "link")
@@ -72,6 +74,7 @@ func TestRootedCallsRefuseASymlinkedFinalElementLeadingOut(t *testing.T) {
 }
 
 func TestWithinRootRefusesALinkedFolderOutTheRoot(t *testing.T) {
+	skipWine(t, "Wine host symlinks are not Windows reparse points")
 	root, evil := t.TempDir(), t.TempDir()
 	if err := os.Symlink(evil, filepath.Join(root, "Foo")); err != nil {
 		t.Skip(err)

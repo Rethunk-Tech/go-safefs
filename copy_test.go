@@ -30,6 +30,7 @@ func TestCopyTreeCopiesSymlinkFilesThatStayInside(t *testing.T) {
 }
 
 func TestCopyTreeRejectsASymlinkFileThatEscapes(t *testing.T) {
+	skipWine(t, "Wine host symlinks are not Windows reparse points")
 	src := t.TempDir()
 	outside := filepath.Join(t.TempDir(), "secret")
 	if err := WriteFile(outside, []byte("no"), 0o600); err != nil {
@@ -90,12 +91,15 @@ func TestRealDirUnderARootReachedThroughALink(t *testing.T) {
 	if err := os.Symlink(dir, root); err != nil {
 		t.Skip(err)
 	}
+	removeBeforeTempCleanup(t, root)
 	if !RealDirUnder(root, filepath.Join(root, "sub")) {
 		t.Fatal("a real folder under a linked root was refused")
 	}
-	if err := os.Symlink(t.TempDir(), filepath.Join(dir, "out")); err != nil {
+	out := filepath.Join(dir, "out")
+	if err := os.Symlink(t.TempDir(), out); err != nil {
 		t.Fatal(err)
 	}
+	removeBeforeTempCleanup(t, out)
 	if RealDirUnder(root, filepath.Join(root, "out")) {
 		t.Fatal("a linked folder leading out was accepted")
 	}
