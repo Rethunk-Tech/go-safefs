@@ -2,4 +2,5 @@ reconciled = "canon v0.1.0-poc"
 
 [deviations]
 # forbidigo bans os.Remove, os.RemoveAll and os.Rename outside the lock-tolerant wrappers and tests.
-"go-golangci-lint-00014" = ".golangci.yml adds a forbidigo rule steering os.Remove, os.RemoveAll and os.Rename to the module's retrying calls (excluded for rename*.go and _test.go), and excludes gosec G302, G304 and G703 in _test.go, where the path is the fixture's own under t.TempDir()"
+'go-golangci-lint-00014 rules:(^rename.*\.go$|_test\.go$):forbidigo' = ".golangci.yml adds a forbidigo rule steering os.Remove, os.RemoveAll and os.Rename to the module's retrying calls (excluded for rename*.go and _test.go), and excludes gosec G302, G304 and G703 in _test.go, where the path is the fixture's own under t.TempDir()"
+'go-golangci-lint-00014 rules:_test\.go$:gosec' = ".golangci.yml adds a forbidigo rule steering os.Remove, os.RemoveAll and os.Rename to the module's retrying calls (excluded for rename*.go and _test.go), and excludes gosec G302, G304 and G703 in _test.go, where the path is the fixture's own under t.TempDir()"
