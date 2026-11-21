@@ -284,3 +284,20 @@ func TestMaterializeFileReplacesAnExistingDestination(t *testing.T) {
 		t.Fatalf("got %q, %v", got, err)
 	}
 }
+
+func TestMaterializeOntoItselfKeepsTheSource(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	f := writeFile(t, dir, "tree/a.txt", "data")
+	tree := filepath.Join(dir, "tree")
+	var m Materializer
+	if err := m.File(f, f, "a.txt"); err != nil {
+		t.Fatalf("File(p, p): %v", err)
+	}
+	if err := m.Tree(tree, tree); err != nil {
+		t.Fatalf("Tree(d, d): %v", err)
+	}
+	if b, err := os.ReadFile(f); err != nil || string(b) != "data" {
+		t.Fatalf("source = %q, %v", b, err)
+	}
+}

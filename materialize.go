@@ -77,6 +77,9 @@ func (o tierOps) fn(t Tier) func(src, dst string) error {
 
 // Tree puts src's files into dst.
 func (m Materializer) Tree(src, dst string) error {
+	if sameFile(src, dst) {
+		return nil
+	}
 	_, err := CopyTree(src, dst, CopyOptions{Put: m.File})
 	return err
 }
@@ -87,6 +90,9 @@ func (m Materializer) File(src, dst, rel string) error {
 }
 
 func (m Materializer) put(ops tierOps, useCache bool, src, dst, rel string) error {
+	if sameFile(src, dst) {
+		return nil // every tier would clear dst first, which is src
+	}
 	shareable := m.Shareable == nil || m.Shareable(filepath.ToSlash(rel))
 	srcDev, srcErr := Device(src)
 	dstDev, dstErr := Device(filepath.Dir(dst))
@@ -146,4 +152,17 @@ func tierAllowed(t Tier, shareable, sameDev bool, caps *capSlots) bool {
 		return false
 	}
 	return caps == nil || t == TierCopy || caps[t-1].Load() >= 0
+}
+
+// sameFile reports whether src and dst name one existing file or folder, by path or by identity.
+func sameFile(src, dst string) bool {
+	if SamePath(src, dst) {
+		return true
+	}
+	a, err := os.Stat(src) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
+	if err != nil {
+		return false
+	}
+	b, err := os.Stat(dst) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
+	return err == nil && os.SameFile(a, b)
 }
