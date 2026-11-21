@@ -81,6 +81,18 @@ func OpenRegular(path string) (*os.File, error) {
 	return f, nil
 }
 
+// ReadFileCapped reads the regular file at path, failing with ErrNotRegular before any read for a pipe, device or
+// folder (a pipe with no writer would block forever) and with ErrTooLarge for a file over limit bytes. It is
+// OpenRegular plus ReadCapped, so it refuses a symlinked last element as OpenRegular does.
+func ReadFileCapped(path string, limit int64) ([]byte, error) {
+	f, err := OpenRegular(path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+	return ReadCapped(f, limit)
+}
+
 // Create creates or truncates path.
 func Create(path string) (*os.File, error) {
 	return Within(path, func(r *os.Root, name string) (*os.File, error) { return r.Create(name) })
@@ -173,8 +185,8 @@ func HashFile(path string, h hash.Hash) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-// IsFile is true when path resolves to a regular file. Unlike IsDir it uses os.Stat, so a symlink whose target
-// is outside path's folder (an executable linked from another library) still counts.
+// IsFile is true when path resolves to a regular file. Like IsDir it uses os.Stat rather than the parent root, so a
+// symlink whose target is outside path's folder (an executable linked from another library) still counts.
 func IsFile(path string) bool {
 	st, err := os.Stat(path) //nolint:gosec // G703: the caller names the path; taking one is this package's contract
 	return err == nil && st.Mode().IsRegular()

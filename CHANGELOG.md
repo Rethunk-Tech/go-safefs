@@ -6,12 +6,19 @@ Notable changes to `go-safefs`. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `ReadFileCapped`, which reads a regular file up to a byte limit and refuses a pipe, device or folder before reading, so a FIFO cannot block the caller. `ErrNestedCopy`, the error `CopyTree` and `CopyTreeFollowingLinks` return for a destination inside the source.
+
 ### Changed
 
 - `WriteFileAtomic`, `WriteStreamAtomic` and `WriteStreamNoSync` let the umask narrow `perm`, as `os.WriteFile` does, instead of setting it verbatim: `0o666` no longer creates a world-writable file. A caller that passes an existing file's mode to keep it gets that mode minus the umask.
 
 ### Fixed
 
+- `Materializer.File(p, p)` and `Tree(d, d)` deleted the source. Putting a path onto itself, or onto a hard link of itself, now does nothing and succeeds.
+- `CopyTree(d, d/sub)` recursed until the disk was full. A destination inside the source (links resolved) is refused with `ErrNestedCopy`, as is a destination equal to the source when `Put` is set.
+- The `IsFile` doc claimed it differs from `IsDir`; both follow a final symlink. `CopyOptions` now says which function reads which field.
 - The copy fallback that opens a file by path judges containment by the opened handle (its final path on Windows, its identity elsewhere), so a link swapped back after the open no longer passes a file outside the source.
 
 ## [0.9.0] - 2026-11-08
