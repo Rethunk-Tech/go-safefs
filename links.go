@@ -42,7 +42,7 @@ func Unshare(path string) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = os.Remove(tmp.Name()) }() //nolint:gosec // G703: the caller names the path; taking one is this package's contract
+	defer func() { _ = Remove(tmp.Name()) }()
 	if _, err := io.Copy(tmp, src); err != nil {
 		_ = tmp.Close()
 		return err

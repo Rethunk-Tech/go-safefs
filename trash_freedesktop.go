@@ -65,7 +65,7 @@ func Trash(path string) error {
 		}
 		if werr != nil {
 			if _, err := os.Lstat(filepath.Join(files, name)); err != nil { // #nosec G703 -- the copy just made in the user's own trash
-				_ = os.Remove(record) // #nosec G703 -- the record just written in the user's own trash
+				_ = Remove(record)
 			}
 			return fmt.Errorf("moving %s to the trash: %w", abs, werr)
 		}
@@ -75,7 +75,7 @@ func Trash(path string) error {
 
 // moveAcross renames from to to, or copies it and deletes the original when they are on different filesystems.
 func moveAcross(from, to string) error {
-	err := os.Rename(from, to) // #nosec G703 -- a folder the caller chose, into the user's own trash
+	err := Rename(from, to)
 	if !errors.Is(err, syscall.EXDEV) {
 		return err
 	}
@@ -83,10 +83,10 @@ func moveAcross(from, to string) error {
 		return err
 	}
 	if err := copyAll(from, to); err != nil {
-		_ = os.RemoveAll(to) // #nosec G703 -- the partial copy just made in the user's own trash
+		_ = RemoveAll(to)
 		return err
 	}
-	return os.RemoveAll(from) // #nosec G703 -- the folder the caller asked to trash, now copied into it
+	return RemoveAll(from)
 }
 
 // copyAll copies a file or folder tree, keeping symlinks as links so the trashed copy restores as it was. Both
