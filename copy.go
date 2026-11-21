@@ -20,6 +20,8 @@ type CopyProgress struct {
 }
 
 // CopyOptions tunes CopyFile, CopyTree and CopyTreeFollowingLinks. The zero value is the default for every field.
+// Each function reads only the fields it names: CopyFile uses TempSuffix; CopyTree uses TempSuffix, First, Progress
+// and Put; CopyTreeFollowingLinks uses TempSuffix and Skip, and ignores First, Progress and Put.
 type CopyOptions struct {
 	// TempSuffix names CopyFile's temp file, dst+TempSuffix. CopyFile removes a stale file of that name before
 	// writing, so the suffix must be specific enough never to name a file anyone keeps. Zero means ".safefs-tmp".
@@ -31,8 +33,47 @@ type CopyOptions struct {
 	// Put writes one file; from is where its bytes live, to where they go, rel its slash path below src. Nil means
 	// CopyFile, which reads through the walk's root; a Put opens from by path, outside that guarantee.
 	Put func(from, to, rel string) error
-	// Skip names entries CopyTreeFollowingLinks leaves out.
+	// Skip names entries CopyTreeFollowingLinks leaves out; CopyTree ignores it.
 	Skip func(name string) bool
+}
+
+// ErrNestedCopy is CopyTree's and CopyTreeFollowingLinks' refusal of a destination inside the source, which would
+// recurse until the disk is full, and of one equal to the source when Put is set.
+var ErrNestedCopy = errors.New("destination is inside the source")
+
+// resolveAhead resolves p's links through its deepest existing ancestor, so a destination that does not exist yet
+// still compares against the source by where it will land.
+func resolveAhead(p string) (string, error) {
+	p, err := filepath.Abs(p)
+	if err != nil {
+		return "", err
+	}
+	var tail []string
+	for {
+		if r, err := EvalSymlinks(p); err == nil {
+			return filepath.Join(append([]string{r}, tail...)...), nil
+		} else if !errors.Is(err, fs.ErrNotExist) {
+			return "", err
+		}
+		parent := filepath.Dir(p)
+		if parent == p {
+			return "", fs.ErrNotExist
+		}
+		tail = append([]string{filepath.Base(p)}, tail...)
+		p = parent
+	}
+}
+
+// checkNotNested returns ErrNestedCopy when dst lies inside root (the resolved source), or equals it with put set.
+func checkNotNested(root, dst string, put bool) error {
+	d, err := resolveAhead(dst)
+	if err != nil {
+		return err
+	}
+	if UnderRoot(root, d) && (put || FoldCase(filepath.Clean(root)) != FoldCase(filepath.Clean(d))) {
+		return fmt.Errorf("%s into %s: %w", root, dst, ErrNestedCopy)
+	}
+	return nil
 }
 
 func (o CopyOptions) tempSuffix() string {
@@ -58,6 +99,9 @@ func CopyTree(src, dst string, opts CopyOptions) (skipped []string, err error) {
 	defer func() { _ = r.Close() }()
 	root, err := EvalSymlinks(src)
 	if err != nil {
+		return nil, err
+	}
+	if err := checkNotNested(root, dst, opts.Put != nil); err != nil {
 		return nil, err
 	}
 	var progress CopyProgress
@@ -395,6 +439,9 @@ func CopyTreeFollowingLinks(src, dst string, opts CopyOptions) (skipped []string
 	defer func() { _ = r.Close() }()
 	root, err := EvalSymlinks(src)
 	if err != nil {
+		return nil, err
+	}
+	if err := checkNotNested(root, dst, false); err != nil {
 		return nil, err
 	}
 	var batch syncBatch

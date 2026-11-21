@@ -359,3 +359,36 @@ func TestHeldUnderJudgesTheHandleNotThePath(t *testing.T) {
 		t.Error("a handle on a file outside src was accepted because the path now resolves inside")
 	}
 }
+
+func TestCopyTreeRefusesADestinationInsideTheSource(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	src := filepath.Join(dir, "src")
+	writeFile(t, src, "a.txt", "x")
+	link := filepath.Join(dir, "link")
+	linked := os.Symlink(src, link) == nil
+	cases := map[string]struct {
+		dst  string
+		opts CopyOptions
+		copy func(src, dst string, opts CopyOptions) ([]string, error)
+	}{
+		"below":          {filepath.Join(src, "sub"), CopyOptions{}, CopyTree},
+		"below, linking": {filepath.Join(src, "sub", "deeper"), CopyOptions{}, CopyTreeFollowingLinks},
+		"itself, put":    {src, CopyOptions{Put: func(_, _, _ string) error { return nil }}, CopyTree},
+	}
+	if linked {
+		cases["below through a link"] = struct {
+			dst  string
+			opts CopyOptions
+			copy func(src, dst string, opts CopyOptions) ([]string, error)
+		}{filepath.Join(link, "sub"), CopyOptions{}, CopyTree}
+	}
+	for name, c := range cases {
+		if _, err := c.copy(src, c.dst, c.opts); !errors.Is(err, ErrNestedCopy) {
+			t.Errorf("%s: err = %v, want ErrNestedCopy", name, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(src, "sub")); !os.IsNotExist(err) {
+		t.Errorf("a refused copy created its destination: %v", err)
+	}
+}
