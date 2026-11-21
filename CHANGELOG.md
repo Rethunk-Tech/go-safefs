@@ -6,9 +6,19 @@ Notable changes to `go-safefs`. The format follows
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-21
+
 ### Added
 
 - `ReadFileCapped`, which reads a regular file up to a byte limit and refuses a pipe, device or folder before reading, so a FIFO cannot block the caller. `ErrNestedCopy`, the error `CopyTree` and `CopyTreeFollowingLinks` return for a destination inside the source.
+
+### Fixed
+
+- `Materializer.File(p, p)` and `Tree(d, d)` deleted the source. Putting a path onto itself, or onto a hard link of itself, now does nothing and succeeds.
+- `CopyTree(d, d/sub)` recursed until the disk was full. A destination inside the source (links resolved) is refused with `ErrNestedCopy`, as is a destination equal to the source when `Put` is set.
+- The `IsFile` doc claimed it differs from `IsDir`; both follow a final symlink. `CopyOptions` now says which function reads which field.
+
+## [0.9.1] - 2026-11-12
 
 ### Changed
 
@@ -16,9 +26,6 @@ Notable changes to `go-safefs`. The format follows
 
 ### Fixed
 
-- `Materializer.File(p, p)` and `Tree(d, d)` deleted the source. Putting a path onto itself, or onto a hard link of itself, now does nothing and succeeds.
-- `CopyTree(d, d/sub)` recursed until the disk was full. A destination inside the source (links resolved) is refused with `ErrNestedCopy`, as is a destination equal to the source when `Put` is set.
-- The `IsFile` doc claimed it differs from `IsDir`; both follow a final symlink. `CopyOptions` now says which function reads which field.
 - The copy fallback that opens a file by path judges containment by the opened handle (its final path on Windows, its identity elsewhere), so a link swapped back after the open no longer passes a file outside the source.
 
 ## [0.9.0] - 2026-11-08
@@ -129,7 +136,9 @@ Notable changes to `go-safefs`. The format follows
 - `Size`, `SizeEachName` and `FreeBytes`.
 - Subpackage `diskcache`: typed JSON cache entries (`Cached`, `CachedStamped`, `Peek`, `Fresh`, `Put`, `PutEntry`) where a failed fetch falls back to a stale entry and the cache itself never errors. A name that would lead outside the cache directory is treated as uncached.
 
-[Unreleased]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.9.1...v0.10.0
+[0.9.1]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/Rethunk-Tech/go-safefs/compare/v0.7.0...v0.7.1
